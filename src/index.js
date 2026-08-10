@@ -59,6 +59,13 @@ export default {
       return Response.redirect(url.toString(), 301);
     }
 
+    if (path === '/product.php') {
+      const slug = url.searchParams.get('slug') || 'lohmann-lsl-lite';
+      url.pathname = `/linhagens/${slug}`;
+      url.search = '';
+      return Response.redirect(url.toString(), 301);
+    }
+
     if (path === '/api/products') return json(await products(env, lang(url)));
     if (path === '/api/representatives') return json(await representatives(env));
     if (path === '/api/team') return json(await team(env));
@@ -68,6 +75,11 @@ export default {
 
     if (path === '/sitemap.xml') return sitemap(request, env);
     if (path === '/robots.txt') return text(`User-agent: *\nAllow: /\nSitemap: ${origin(env, request)}/sitemap.xml\n`, 'text/plain');
+
+    if (path.startsWith('/linhagens/')) {
+      const slug = path.split('/').filter(Boolean).pop();
+      return html(await renderProductPage(slug, request, env));
+    }
 
     const pageKey = ROUTES[path];
     if (pageKey) {
@@ -238,6 +250,20 @@ function sectionValue(sections, key, field, fallback = '') {
   return String(sections?.[key]?.[field] || fallback);
 }
 
+function fallbackRepresentatives() {
+  return [
+    {
+      name: 'Equipe Lohmann do Brasil',
+      role: 'Atendimento nacional',
+      region: 'Encaminhamento para o representante responsável',
+      phone: '(17) 3212-7347',
+      email: 'contato@lohmann.com.br',
+      city: 'Nova Granada, SP',
+      initials: 'LB',
+    },
+  ];
+}
+
 async function renderPage(pageKey, request, env) {
   const url = new URL(request.url);
   const selectedLang = lang(url);
@@ -276,7 +302,7 @@ async function renderPage(pageKey, request, env) {
   ${headerCloud(pageKey)}
   <main>${main}</main>
   ${footerCloud()}
-  <script>window.LohmannRepresentatives = ${JSON.stringify(repRows)}; window.LohmannFallbackRepresentatives = [];</script>
+  <script>window.LohmannRepresentatives = ${JSON.stringify(repRows)}; window.LohmannFallbackRepresentatives = ${JSON.stringify(fallbackRepresentatives())};</script>
   <script src="/assets/site.js" defer></script>
 </body>
 </html>`;
@@ -376,37 +402,125 @@ function home(productRows, sections = {}) {
 }
 
 function productGrid(productRows) {
-  const rows = productRows.length ? productRows : [
+  const rows = productRows.length ? productRows : fallbackProducts();
+  return `<section class="products section" id="linhagens"><header class="section-heading"><div><p class="eyebrow">Portfólio Lohmann</p><h2>Linhagens calibradas por manejo, clima e mercado.</h2></div></header><div class="product-grid">${rows.map((product, index) => `<article class="product-card reveal"><div class="product-art product-art-${index + 1}"><span>0${index + 1}</span><img class="product-hen official-hen" src="/assets/${product.slug.includes('brown') ? 'galinha-marron-oficial-lohmann.png' : 'galinha-branca-oficial-lohmann.png'}" alt="${h(product.name)}"></div><div class="product-copy"><small>${h(product.egg_color)}</small><h3>${h(product.name)}</h3><p>${h(product.summary)}</p><a href="/linhagens/${h(product.slug)}">Ver detalhes <b>+</b></a></div></article>`).join('')}</div></section>`;
+}
+
+function fallbackProducts() {
+  return [
     { slug: 'lohmann-lsl-lite', name: 'LOHMANN LSL-LITE', egg_color: 'Ovos brancos', summary: 'Linhagem calibrada para uniformidade, eficiência alimentar e manejo previsível.' },
     { slug: 'lohmann-brown-lite', name: 'LOHMANN BROWN-LITE', egg_color: 'Ovos marrons', summary: 'Linhagem projetada para eficiência, persistência e ajuste ao mercado.' },
   ];
-  return `<section class="products section" id="linhagens"><header class="section-heading"><div><p class="eyebrow">Portfólio Lohmann</p><h2>Linhagens calibradas por manejo, clima e mercado.</h2></div></header><div class="product-grid">${rows.map((product, index) => `<article class="product-card reveal"><div class="product-art product-art-${index + 1}"><span>0${index + 1}</span><img class="product-hen official-hen" src="/assets/${product.slug.includes('brown') ? 'galinha-marron-oficial-lohmann.png' : 'galinha-branca-oficial-lohmann.png'}" alt="${h(product.name)}"></div><div class="product-copy"><small>${h(product.egg_color)}</small><h3>${h(product.name)}</h3><p>${h(product.summary)}</p><a href="/linhagens">Ver detalhes <b>+</b></a></div></article>`).join('')}</div></section>`;
 }
 
 function sobre(teamRows) {
-  return `<section class="internal-hero"><p class="eyebrow">A Lohmann</p><h1>Genética avícola com presença técnica no campo.</h1><p>A Lohmann do Brasil atua junto a produtores, granjas e distribuidores com linhagens comerciais de postura, materiais técnicos e acompanhamento de campo.</p></section><section class="content-bands content-bands-rich"><div class="content-grid content-grid-four"><article class="content-card"><span>01</span><h2>Genética</h2><p>Seleção orientada por eficiência, viabilidade, persistência e qualidade de ovos.</p></article><article class="content-card"><span>02</span><h2>Manejo</h2><p>Leitura técnica para adaptar a linhagem ao sistema produtivo.</p></article><article class="content-card"><span>03</span><h2>Mercado</h2><p>A ave certa para cada manejo e o ovo certo para cada mercado.</p></article><article class="content-card"><span>04</span><h2>Campo</h2><p>Rede técnica para atendimento regional e acompanhamento de indicadores.</p></article></div>${teamMarkup(teamRows)}</section>`;
+  return `<section class="internal-hero"><p class="eyebrow">A Lohmann</p><h1>Genética avícola com presença técnica no campo.</h1><p>A Lohmann do Brasil atua junto a produtores, granjas e distribuidores com linhagens comerciais de postura, materiais técnicos e acompanhamento de campo.</p></section><section class="content-bands content-bands-rich"><div class="content-prose"><p class="eyebrow">Atuação técnica</p><h2>Atuação baseada em genética, manejo e acompanhamento técnico.</h2><p>A presença da Lohmann do Brasil no campo aproxima genética, manejo e informação técnica para apoiar diferentes realidades produtivas e mercados de destino.</p></div><div class="content-grid content-grid-four"><article class="content-card"><span>01</span><h2>Adequação de sistema</h2><p>A escolha da ave considera sistema produtivo, manejo disponível e mercado de cada cliente.</p></article><article class="content-card"><span>02</span><h2>Engenharia de performance</h2><p>Robustez, persistência e longevidade são tratadas como parâmetros de projeto.</p></article><article class="content-card"><span>03</span><h2>Bem-estar como eficiência</h2><p>Estresse, viabilidade, estabilidade de penas e mortalidade entram na leitura técnica do sistema.</p></article><article class="content-card"><span>04</span><h2>Calibragem em campo</h2><p>O suporte técnico mantém o potencial genético ajustado à realidade da operação.</p></article></div><div class="split-panel"><div><p class="eyebrow">Método</p><h2>Como a Lohmann sustenta a decisão</h2></div><ul class="check-list"><li>Diagnóstico do sistema produtivo: manejo, estrutura, clima, objetivo e mercado de saída.</li><li>Seleção da linhagem conforme variável técnica, não por tradição de marca.</li><li>Acompanhamento de indicadores para robustez, persistência, viabilidade e ajuste de manejo.</li><li>Conteúdo técnico organizado para consulta, treinamento e padronização da operação.</li></ul></div><section class="about-institutional"><div><p class="eyebrow">Lohmann Breeders</p><h2>Uma atuação conectada ao desenvolvimento global da genética Lohmann.</h2><p>A Lohmann Breeders reúne décadas de seleção genética, serviço técnico e intercâmbio de conhecimento para atender mercados com diferentes sistemas produtivos. No Brasil, essa base é traduzida para a realidade das granjas, produtores e distribuidores.</p></div><div class="about-institutional-grid"><article><h3>História e seleção</h3><p>A evolução das linhagens Lohmann é baseada em pesquisa, avaliação de desempenho e adaptação a diferentes demandas de mercado.</p></article><article><h3>Serviço técnico</h3><p>O suporte combina orientação de manejo, materiais técnicos e troca de informação para preservar o potencial genético no campo.</p></article><article><h3>Mercado e produto</h3><p>A decisão por linhagem considera a ave certa para cada manejo e o ovo certo para cada mercado.</p></article></div></section>${teamMarkup(teamRows)}<div class="page-cta"><div><p class="eyebrow">Próximo passo</p><h2>Quer decidir alojamento por parâmetro?</h2><p>A equipe Lohmann pode ajudar a diagnosticar o sistema produtivo e direcionar a linhagem com melhor ajuste técnico.</p></div><a class="button primary" href="/#contato">Falar com a equipe</a></div></section>`;
 }
 
 function teamMarkup(rows) {
-  if (!rows.length) return '';
-  return `<section class="team-section"><div class="content-prose"><p class="eyebrow">Equipe Lohmann do Brasil</p><h2>Pessoas de referência para atendimento técnico, comercial e institucional.</h2></div><div class="team-grid">${rows.map((member) => `<article class="team-card"><figure class="team-photo">${member.photo ? `<img src="${h(member.photo)}" alt="${h(member.name)}">` : `<span>${h(member.initials)}</span>`}</figure><div><h3>${h(member.name)}</h3><p>${h(member.position)}</p>${member.phone ? `<a href="${h(member.whatsapp)}" target="_blank" rel="noopener">${h(member.phone)}</a>` : ''}</div></article>`).join('')}</div></section>`;
+  const members = rows.length ? rows : [
+    { name: 'Equipe Lohmann do Brasil', position: 'Atendimento técnico, comercial e institucional', phone: '', initials: 'LB' },
+  ];
+  return `<section class="team-section"><div class="content-prose"><p class="eyebrow">Equipe Lohmann do Brasil</p><h2>Pessoas de referência para atendimento técnico, comercial e institucional.</h2><p>A equipe segue a estrutura de contatos para manter um formato organizado para publicação e administração em banco de dados.</p></div><div class="team-grid">${members.map((member) => `<article class="team-card"><figure class="team-photo">${member.photo ? `<img src="${h(member.photo)}" alt="${h(member.name)}">` : `<span>${h(member.initials || initials(member.name))}</span>`}</figure><div><h3>${h(member.name)}</h3><p>${h(member.position)}</p>${member.phone ? `<a href="${h(member.whatsapp || whatsapp(member.phone, member.name))}" target="_blank" rel="noopener">${h(member.phone)}</a>` : ''}</div></article>`).join('')}</div></section>`;
 }
 
 function linhagens(productRows) {
-  return `<section class="internal-hero lineages-hero"><p class="eyebrow">Linhagens</p><h1>Linhagens calibradas para cada sistema produtivo.</h1><p>A linha Lohmann reúne aves para mercados de ovos brancos e marrons, com seleção orientada por manejo, clima, peso de ovo, persistência, viabilidade e objetivo comercial.</p></section>${productGrid(productRows)}<section class="content-bands lineages-support"><div class="content-grid"><article class="content-card"><span>LSL</span><h2>LOHMANN LSL-LITE</h2><p>50% de produção entre 140 e 145 dias, pico entre 95% e 97% e foco em ovos brancos com boa aparência e resistência de casca.</p></article><article class="content-card"><span>BR</span><h2>LOHMANN BROWN-LITE</h2><p>50% de produção entre 140 e 145 dias, pico entre 95% e 97% e foco em ovos marrons com persistência e qualidade de casca.</p></article></div></section>`;
+  return `<section class="internal-hero lineages-hero"><p class="eyebrow">Linhagens</p><h1>Linhagens calibradas para cada sistema produtivo.</h1><p>A linha Lohmann reúne aves para mercados de ovos brancos e marrons, com seleção orientada por manejo, clima, peso de ovo, persistência, viabilidade e objetivo comercial.</p></section>${productGrid(productRows)}<section class="content-bands lineages-support"><div class="content-grid"><article class="content-card"><span>01</span><h2>Escolha técnica</h2><p>A definição da linhagem considera sistema produtivo, manejo disponível, clima, mercado de saída e perfil de ovo.</p></article><article class="content-card"><span>02</span><h2>Indicadores de ciclo</h2><p>Persistência, viabilidade, qualidade de casca e consumo são analisados como parâmetros de acompanhamento do lote.</p></article><article class="content-card"><span>03</span><h2>Suporte em campo</h2><p>A equipe Lohmann apoia a interpretação de dados e a calibragem de manejo para preservar o potencial genético.</p></article></div></section>`;
 }
 
 function reps(repRows) {
-  const buttons = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO'];
-  return `<section class="internal-hero reps-hero"><p class="eyebrow">Representantes</p><h1>Encontre sua rede técnica regional.</h1><p>Clique em um estado no mapa para fixar a lista de representantes ao lado. Para voltar ao mapa completo, use o botão de retorno.</p></section><section class="representatives-section"><div class="map-shell"><div class="map-label"><span>Estado selecionado</span><strong id="selected-state-label">--</strong></div><img class="brazil-map-image" src="/assets/mapa-brasil-representantes.png" alt="Mapa do Brasil">${buttons.map((uf) => `<button class="state-node state-${uf.toLowerCase()}" data-state="${uf}" data-name="${uf}" type="button">${uf}</button>`).join('')}</div><aside class="representatives-panel"><button id="rep-reset-button" class="button primary" type="button" hidden>Voltar ao mapa</button><p class="eyebrow">Estado selecionado</p><h2 id="rep-state-name">Clique em um estado</h2><div id="rep-list"></div></aside></section>`;
+  const states = [
+    ['RR','Roraima',578,103,68,58], ['AP','Amapá',830,112,64,60], ['AM','Amazonas',473,252,210,132],
+    ['PA','Pará',797,271,160,125], ['AC','Acre',318,377,76,48], ['RO','Rondônia',518,416,78,62],
+    ['TO','Tocantins',924,397,62,88], ['MA','Maranhão',1022,263,70,70], ['PI','Piauí',1082,337,52,72],
+    ['CE','Ceará',1168,252,56,48], ['RN','Rio Grande do Norte',1248,286,54,34], ['PB','Paraíba',1260,319,45,28],
+    ['PE','Pernambuco',1250,354,58,32], ['AL','Alagoas',1238,391,38,28], ['SE','Sergipe',1214,423,35,28],
+    ['BA','Bahia',1100,466,112,98], ['MT','Mato Grosso',723,466,145,118], ['GO','Goiás',872,550,86,84],
+    ['DF','Distrito Federal',926,544,26,22], ['MS','Mato Grosso do Sul',736,651,96,86], ['MG','Minas Gerais',1028,620,112,94],
+    ['ES','Espírito Santo',1136,641,38,44], ['RJ','Rio de Janeiro',1093,688,48,34], ['SP','São Paulo',904,707,92,62],
+    ['PR','Paraná',816,766,78,56], ['SC','Santa Catarina',848,838,64,42], ['RS','Rio Grande do Sul',776,906,92,72],
+  ];
+  const mapNodes = states.map(([uf, name, x, y, rx, ry]) => `<g class="state-node ${repRows[uf] ? 'has-reps' : ''}" data-state="${uf}" data-name="${h(name)}" tabindex="0" role="button" aria-label="${h(name)}"><ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}"></ellipse><text x="${x}" y="${y + 8}">${uf}</text></g>`).join('');
+  return `<section class="representatives-hero"><h1>Encontre o representante Lohmann para sua região.</h1><p>Use o mapa interativo para localizar o atendimento por estado. Clique sobre a sigla do estado desejado para fixar a lista de representantes e consulte telefone, região de atuação e informações de contato. Para escolher outro estado, use o botão voltar ao mapa.</p></section><section class="representatives-section"><div class="map-shell"><div class="map-toolbar"><span>Mapa Brasil</span><strong id="selected-state-label">--</strong></div><svg class="brazil-state-map image-state-map" viewBox="0 0 1536 1024" role="img" aria-label="Mapa interativo do Brasil por estado"><defs><filter id="stateGlow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="4" result="blur"></feGaussianBlur><feMerge><feMergeNode in="blur"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge></filter></defs><image class="map-art" href="/assets/mapa-brasil-representantes.png" x="0" y="0" width="1536" height="1024" preserveAspectRatio="xMidYMid meet"></image>${mapNodes}</svg><p class="map-note">Clique em um estado para fixar os representantes. Use o botão voltar para limpar a seleção.</p></div><aside class="representative-panel" aria-live="polite"><span class="panel-kicker">Estado selecionado</span><h2 id="rep-state-name">Clique em um estado</h2><button class="rep-reset-button" type="button" id="rep-reset-button">Voltar ao mapa</button><div id="rep-list" class="rep-list"></div></aside></section><section class="content-bands content-bands-rich representatives-info"><div class="content-grid"><article class="content-card"><span>01</span><h2>Leitura regional</h2><p>O representante entende as variáveis de manejo, clima, logística e mercado que influenciam a decisão genética.</p></article><article class="content-card"><span>02</span><h2>Encaminhamento correto</h2><p>Cada solicitação é direcionada para atendimento técnico, comercial ou distribuição com contexto de operação.</p></article><article class="content-card"><span>03</span><h2>Calibragem de campo</h2><p>A conversa com a rede Lohmann ajuda a alinhar linhagem, manejo e próximo passo de suporte.</p></article></div></section>`;
 }
 
 function radar() {
-  return `<section class="internal-hero radar-page-hero"><p class="eyebrow">Radar Técnico</p><h1>Indicadores de mercado para apoio à leitura técnica.</h1><p>A página centraliza dados de referência para acompanhar movimentos do setor e apoiar a rotina comercial e produtiva.</p></section><section class="radar-page-grid"><article class="content-card"><span>Leitura</span><h2>Como usar os dados</h2><p>Os indicadores ajudam a observar tendências, comparar praças e contextualizar decisões de alojamento, manejo e comercialização.</p></article><div class="cepea-widget"><script type="text/javascript" src="https://cepea.org.br/br/widgetproduto.js.php?fonte=arial&tamanho=10&largura=400px&corfundo=111111&cortexto=ffffff&corlinha=f78e05&id_indicador%5B%5D=159-Bastos+(SP)+-+FOB-branco&id_indicador%5B%5D=159-Grande+BH+-+(MG)+-+CIF-branco&id_indicador%5B%5D=159-Grande+SP+(SP)+-+CIF-branco&id_indicador%5B%5D=159-Recife+(PE)+-+CIF-branco&id_indicador%5B%5D=159-S.+M.+de+Jetib%C3%A1+(ES)+-+FOB-branco&id_indicador%5B%5D=159-Bastos+(SP)+-+FOB-vermelho&id_indicador%5B%5D=159-Grande+BH+-+(MG)+-+CIF-vermelho&id_indicador%5B%5D=159-Grande+SP+(SP)+-+CIF-vermelho&id_indicador%5B%5D=159-Recife+(PE)+-+CIF-vermelho&id_indicador%5B%5D=159-S.+M.+de+Jetib%C3%A1+(ES)+-+FOB-vermelho&id_indicador%5B%5D=12&id_indicador%5B%5D=92"></script></div></section>`;
+  return `<section class="internal-hero radar-page-hero"><p class="eyebrow"><span class="live-dot"></span>Radar Técnico</p><h1>Indicadores de mercado para decisão técnica.</h1><p>Acompanhe referências de preço para ovos em praças brasileiras. Os dados servem como apoio para análise técnica e comercial, sempre combinados com a realidade produtiva de cada operação.</p></section><section class="technical-radar section radar-page"><header class="section-heading"><div><p class="eyebrow">Mercado de ovos</p><h2>Cotações de referência</h2></div><p>Indicadores de mercado ajudam a contextualizar decisões técnicas, comerciais e de alojamento quando analisados junto aos dados de produção.</p></header><div class="radar-dashboard"><aside class="radar-insights"><p class="eyebrow">Leitura técnica</p><h2>Preço é contexto. Decisão depende de sistema.</h2><p>O Radar Técnico foi pensado como ponto de consulta para produtores, granjas e distribuidores acompanharem referências de mercado sem perder a visão produtiva.</p><div class="radar-insight-grid"><article><span>01</span><strong>Mercado</strong><p>Compare praças, tipo de ovo e variações regionais para entender pressão comercial.</p></article><article><span>02</span><strong>Produção</strong><p>Relacione preço, idade do lote, persistência, consumo e qualidade de ovos.</p></article><article><span>03</span><strong>Manejo</strong><p>Use os indicadores como apoio, não como leitura isolada da eficiência do sistema.</p></article></div></aside><div class="cepea-widget-card"><script type="text/javascript" src="https://cepea.org.br/br/widgetproduto.js.php?fonte=arial&tamanho=10&largura=100%25&corfundo=242424&cortexto=ffffff&corlinha=f78e05&id_indicador%5B%5D=159-Bastos+(SP)+-+FOB-branco&id_indicador%5B%5D=159-Grande+BH+-+(MG)+-+CIF-branco&id_indicador%5B%5D=159-Grande+SP+(SP)+-+CIF-branco&id_indicador%5B%5D=159-Recife+(PE)+-+CIF-branco&id_indicador%5B%5D=159-S.+M.+de+Jetib%C3%A1+(ES)+-+FOB-branco&id_indicador%5B%5D=159-Bastos+(SP)+-+FOB-vermelho&id_indicador%5B%5D=159-Grande+BH+-+(MG)+-+CIF-vermelho&id_indicador%5B%5D=159-Grande+SP+(SP)+-+CIF-vermelho&id_indicador%5B%5D=159-Recife+(PE)+-+CIF-vermelho&id_indicador%5B%5D=159-S.+M.+de+Jetib%C3%A1+(ES)+-+FOB-vermelho&id_indicador%5B%5D=12&id_indicador%5B%5D=92"></script></div></div></section>`;
 }
 
 function simplePage(title, description) {
-  return `<section class="internal-hero"><p class="eyebrow">${h(title)}</p><h1>${h(title)}</h1><p>${h(description)}</p></section><section class="content-bands"><div class="content-grid"><article class="content-card"><span>01</span><h2>Conteúdo administrável</h2><p>Esta página está preparada para receber dados do D1 e evoluir com novos módulos no painel.</p></article><article class="content-card"><span>02</span><h2>Estrutura Cloudflare</h2><p>Assets estáticos, rotas no Worker e dados versionados em migrations D1.</p></article></div></section>`;
+  if (title === 'Suporte técnico') return suportePage();
+  if (title === 'Biblioteca') return bibliotecaPage();
+  if (title === 'Artigos') return artigosPage();
+  return `<section class="internal-hero"><p class="eyebrow">${h(title)}</p><h1>${h(title)}</h1><p>${h(description)}</p></section>`;
+}
+
+function suportePage() {
+  return `<section class="internal-hero"><p class="eyebrow">Suporte técnico</p><h1>Suporte técnico é calibragem do sistema genético em campo.</h1><p>A função do suporte Lohmann é transformar dado, manejo e observação de campo em ajuste técnico para preservar o potencial produtivo da linhagem.</p></section><section class="content-bands content-bands-rich"><div class="content-grid content-grid-six">${[
+    ['01', 'Documentos técnicos', 'Guias e materiais para leitura de manejo, indicadores, ambiência, recria, postura e qualidade de ovos.'],
+    ['02', 'Treinamentos', 'Conteúdos para padronizar decisões por parâmetro, não por tradição ou tentativa.'],
+    ['03', 'Gestão de lote', 'Ferramentas para acompanhar desempenho, identificar desvios e antecipar ajustes.'],
+    ['04', 'Comunicados', 'Atualizações técnicas e institucionais com linguagem direta.'],
+    ['05', 'Pedidos', 'Fluxo para organizar solicitações comerciais e direcionar demandas com contexto.'],
+    ['06', 'Atendimento', 'Canal para encaminhar dúvidas técnicas e comerciais à equipe responsável.'],
+  ].map(([n, title, text]) => `<article class="content-card"><span>${n}</span><h2>${title}</h2><p>${text}</p></article>`).join('')}</div><div class="split-panel split-panel-dark"><div><p class="eyebrow">Gestão de manejo</p><h2>Da informação ao ajuste de manejo</h2></div><ol class="number-list"><li>Identificar o sistema produtivo, o mercado de saída e a meta do lote.</li><li>Relacionar indicadores de campo com robustez, persistência, viabilidade e qualidade de ovos.</li><li>Priorizar os desvios que afetam performance e eficiência.</li><li>Registrar orientação técnica e acompanhar a resposta do lote.</li></ol></div><div class="page-cta"><div><p class="eyebrow">Ovoflock</p><h2>Use o Ovoflock como base técnica da operação.</h2><p>Documentos, treinamentos, comunicados e atendimentos ficam organizados para apoiar decisões por parâmetro.</p></div><a class="button primary" href="https://ovoflock.com/login" target="_blank" rel="noopener">Acessar Ovoflock</a></div></section>`;
+}
+
+function bibliotecaPage() {
+  const items = [
+    ['01', 'Planilhas de acompanhamento de lote', 'Modelos para organizar dados de produção, consumo, mortalidade, peso de ovos e rotina de leitura técnica.'],
+    ['02', 'Controle de produção e indicadores', 'Materiais de apoio para registrar informações operacionais e acompanhar desvios ao longo do ciclo produtivo.'],
+    ['03', 'Materiais de manejo e decisão', 'Arquivos voltados à padronização de consultas técnicas, histórico de lotes e acompanhamento em campo.'],
+  ];
+  return `<section class="internal-hero"><p class="eyebrow">Biblioteca</p><h1>Planilhas e materiais de apoio técnico.</h1><p>A biblioteca organiza arquivos de consulta para acompanhamento de lotes, leitura de indicadores e apoio à rotina de manejo.</p></section><section class="content-bands content-bands-rich library-page"><div class="content-grid">${items.map(([n, title, text]) => `<article class="content-card"><span>${n}</span><h2>${title}</h2><p>${text}</p></article>`).join('')}</div><div class="page-cta"><div><p class="eyebrow">Origem das planilhas</p><h2>Conteúdo baseado na área de planilhas do site antigo.</h2><p>Esta página pode receber os links diretos ou arquivos importados no painel conforme os materiais forem liberados para publicação.</p></div><a class="button primary" href="https://ltz.com.br/aba-planilhas" target="_blank" rel="noopener">Abrir site antigo</a></div></section>`;
+}
+
+function artigosPage() {
+  return `<section class="internal-hero"><p class="eyebrow">Artigos</p><h1>Conteúdo técnico para quem decide por parâmetro.</h1><p>Artigos, comunicados e eventos apresentam informações sobre a Lohmann do Brasil, sua atuação técnica, suas linhagens e temas relevantes para o setor avícola.</p></section><section class="content-bands content-bands-rich"><div class="content-grid"><article class="content-card"><span>Engenharia de sistema</span><h2>A ave certa para cada manejo</h2><p>Conteúdos sobre escolha de linhagem conforme sistema produtivo, clima, mercado de saída e objetivo de performance.</p></article><article class="content-card"><span>Robustez e bem-estar</span><h2>Bem-estar como variável de eficiência</h2><p>Materiais sobre viabilidade, estresse, estabilidade de penas, mortalidade e impacto direto no resultado produtivo.</p></article><article class="content-card"><span>Suporte técnico</span><h2>Calibragem de campo</h2><p>Registros, agenda e orientações da rede técnica regional para manter o potencial genético ajustado à operação.</p></article></div><div class="split-panel"><div><p class="eyebrow">Editorial</p><h2>Linha editorial</h2></div><ul class="check-list"><li>Toda afirmação de performance deve ser tratada como parâmetro técnico, não como adjetivo solto.</li><li>Os temas devem considerar sistema produtivo, manejo, região, mercado de destino e qualidade de ovos.</li><li>Bem-estar deve aparecer como dado de eficiência, não como apelo emocional.</li><li>O conteúdo deve responder perguntas técnicas com estrutura clara para produtores, distribuidores e ferramentas de IA.</li></ul></div><div class="editorial-box"><p class="eyebrow">Planejamento</p><h2>Pautas prioritárias</h2><div class="mini-grid"><article><p>Como ler persistência de postura como indicador de decisão genética.</p></article><article><p>Por que sistemas alternativos exigem genética calibrada de forma diferente.</p></article><article><p>Como robustez, viabilidade e bem-estar entram na eficiência do lote.</p></article></div></div></section>`;
+}
+
+async function renderProductPage(slug, request, env) {
+  const selectedLang = lang(new URL(request.url));
+  const rows = await products(env, selectedLang).catch(() => []);
+  const product = (rows.length ? rows : fallbackProducts()).find((item) => item.slug === slug) || fallbackProducts()[0];
+  const specs = productSpecs(product.slug);
+  const image = product.slug.includes('brown') ? '/assets/galinha-marron-oficial-lohmann.png' : '/assets/galinha-branca-oficial-lohmann.png';
+  const metaTitle = `${product.name} | Lohmann do Brasil`;
+  const metaDescription = product.summary || 'Linhagem Lohmann para sistemas de postura comercial.';
+
+  const main = `<section class="product-hero"><div class="product-hero-copy"><a class="back" href="/linhagens">Voltar</a><p class="eyebrow">Linhagem | ${h(product.egg_color)}</p><h1>${h(product.name)}</h1><p>${h(product.summary)}</p><a class="button primary" href="/#contato">Solicitar diagnóstico técnico</a></div><div class="product-hero-art product-hero-hen" aria-hidden="true"><img src="${image}" alt=""><span>${h(product.egg_color)}</span></div></section><article class="product-content product-content-rich"><section class="product-specs"><div class="product-specs-head"><p class="eyebrow">Dados produtivos</p><h2>Indicadores técnicos da ${h(product.name)}.</h2><p>Informações de referência para análise de potencial produtivo, qualidade de ovos, consumo, peso corporal e viabilidade.</p></div><div class="product-specs-intro">${specs.intro.map(([label, value]) => `<article><span>${h(label)}</span><strong>${h(value)}</strong></article>`).join('')}</div><div class="product-specs-grid">${specs.groups.map(([title, items]) => `<article><h3>${h(title)}</h3><ul>${items.map((item) => `<li>${h(item)}</li>`).join('')}</ul></article>`).join('')}</div></section><p class="eyebrow">Informações da linhagem</p><h2>Para cada manejo, a ave certa.</h2><p>${product.slug.includes('brown') ? 'A LOHMANN BROWN-LITE atende operações orientadas ao mercado de ovos marrons, com foco em persistência, qualidade de casca e ajuste ao sistema produtivo.' : 'A LOHMANN LSL-LITE atende operações orientadas ao mercado de ovos brancos, com foco em uniformidade, eficiência alimentar e manejo previsível.'}</p><p>Indicadores técnicos devem ser interpretados junto ao manejo, clima, ambiência, mercado de destino e acompanhamento de campo.</p><div class="product-pillars"><section><span>01</span><p>Escolha genética orientada por sistema produtivo.</p></section><section><span>02</span><p>Leitura de consumo, viabilidade, persistência e qualidade de ovos.</p></section><section><span>03</span><p>Suporte técnico para calibragem em campo.</p></section></div></article>`;
+
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${h(metaTitle)}</title><meta name="description" content="${h(metaDescription)}"><link rel="canonical" href="${h(origin(env, request))}/linhagens/${h(product.slug)}"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="/assets/site.css"></head><body class="internal-page product-page">${topBarCloud()}${headerCloud('linhagens')}<main>${main}</main>${footerCloud()}<script src="/assets/site.js" defer></script></body></html>`;
+}
+
+function productSpecs(slug) {
+  if (slug.includes('brown')) {
+    return {
+      intro: [['Idade com 50% de produção', '140 a 145 dias'], ['Pico de produção', '95% a 97%']],
+      groups: [
+        ['Ovos por ave alojada', ['72 semanas de idade: 327', '80 semanas de idade: 370', '100 semanas de idade: 466']],
+        ['Massa dos ovos por ave alojada', ['72 semanas de idade: 20,34 kg', '80 semanas de idade: 23,18 kg', '95 semanas de idade: 29,44 kg']],
+        ['Peso médio dos ovos', ['72 semanas de idade: 62,3 g', '80 semanas de idade: 62,6 g', '100 semanas de idade: 63,2 g']],
+        ['Características dos ovos', ['Cor da casca: marrom com boa aparência', 'Resistência de quebra da casca: superior a 40 Newtons']],
+        ['Consumo de ração', ['2,0 a 2,2 kg/kg de massa de ovo']],
+        ['Peso corporal', ['17ª semana: 1,41 kg', 'No fim da produção: 2,02 kg']],
+        ['Viabilidade', ['Recria: 98% a 99%', 'No fim da produção: 90% a 92%', '72ª semana: 95% a 96%', '100ª semana: 90% a 91%']],
+      ],
+    };
+  }
+
+  return {
+    intro: [['Idade com 50% de produção', '140 a 145 dias'], ['Pico de produção', '95% a 97%']],
+    groups: [
+      ['Ovos por ave alojada', ['72 semanas de idade: 332', '80 semanas de idade: 378', '100 semanas de idade: 477']],
+      ['Massa dos ovos por ave alojada', ['72 semanas de idade: 20,23 kg', '80 semanas de idade: 23,12 kg', '100 semanas de idade: 29,49 kg']],
+      ['Peso médio dos ovos', ['72 semanas de idade: 60,85 g', '80 semanas de idade: 61,19 g', '100 semanas de idade: 61,80 g']],
+      ['Características dos ovos', ['Cor da casca: branca com boa aparência', 'Resistência de quebra da casca: superior a 40 Newtons']],
+      ['Consumo de ração', ['1,9 a 2,1 kg/kg de massa de ovo']],
+      ['Peso corporal', ['17ª semana: 1,29 kg', 'No fim da produção: 1,72 kg']],
+      ['Viabilidade', ['Recria: 98% a 99%', '72ª semana: 95% a 96%', '100ª semana: 91% a 92%']],
+    ],
+  };
 }
 
 async function saveContact(request, env) {
