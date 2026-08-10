@@ -1,4 +1,4 @@
-const toggle = document.querySelector('.menu-toggle');
+﻿const toggle = document.querySelector('.menu-toggle');
 const nav = document.querySelector('.nav');
 toggle?.addEventListener('click', () => {
   const open = document.body.classList.toggle('menu-open');
@@ -127,7 +127,7 @@ if (!localStorage.getItem(cookieConsentKey)) {
   banner.innerHTML = `
     <div>
       <strong>Permissão de cookies</strong>
-      <p>Utilizamos cookies necessórios para o funcionamento do site e para melhorar sua experiência de navegação. Ao continuar, você concorda com o uso desses cookies.</p>
+      <p>Utilizamos cookies necessários para o funcionamento do site e para melhorar sua experiência de navegação. Ao continuar, você concorda com o uso desses cookies.</p>
     </div>
     <button type="button" class="button primary">Aceitar cookies</button>
   `;
@@ -139,4 +139,5 @@ if (!localStorage.getItem(cookieConsentKey)) {
     window.setTimeout(() => banner.remove(), 300);
   });
 }
+
 
