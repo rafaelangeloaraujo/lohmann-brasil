@@ -1,5 +1,5 @@
 const LANGS = new Set(['pt', 'en', 'es']);
-const ASSET_VERSION = '20260810-1318';
+const ASSET_VERSION = '20260810-1432';
 
 const ROUTES = {
   '/': 'home',
