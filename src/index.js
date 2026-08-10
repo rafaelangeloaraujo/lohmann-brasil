@@ -1,4 +1,5 @@
 const LANGS = new Set(['pt', 'en', 'es']);
+const ASSET_VERSION = '20260810-1318';
 
 const ROUTES = {
   '/': 'home',
@@ -295,7 +296,7 @@ async function renderPage(pageKey, request, env) {
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/assets/site.css">
+  <link rel="stylesheet" href="/assets/site.css?v=${ASSET_VERSION}">
 </head>
 <body class="${pageKey === 'home' ? '' : 'internal-page'} ${pageKey}-page">
   ${topBarCloud()}
@@ -303,7 +304,7 @@ async function renderPage(pageKey, request, env) {
   <main>${main}</main>
   ${footerCloud()}
   <script>window.LohmannRepresentatives = ${JSON.stringify(repRows)}; window.LohmannFallbackRepresentatives = ${JSON.stringify(fallbackRepresentatives())};</script>
-  <script src="/assets/site.js" defer></script>
+  <script src="/assets/site.js?v=${ASSET_VERSION}" defer></script>
 </body>
 </html>`;
 }
@@ -490,7 +491,7 @@ async function renderProductPage(slug, request, env) {
 
   const main = `<section class="product-hero"><div class="product-hero-copy"><a class="back" href="/linhagens">Voltar</a><p class="eyebrow">Linhagem | ${h(product.egg_color)}</p><h1>${h(product.name)}</h1><p>${h(product.summary)}</p><a class="button primary" href="/#contato">Solicitar diagnóstico técnico</a></div><div class="product-hero-art product-hero-hen" aria-hidden="true"><img src="${image}" alt=""><span>${h(product.egg_color)}</span></div></section><article class="product-content product-content-rich"><section class="product-specs"><div class="product-specs-head"><p class="eyebrow">Dados produtivos</p><h2>Indicadores técnicos da ${h(product.name)}.</h2><p>Informações de referência para análise de potencial produtivo, qualidade de ovos, consumo, peso corporal e viabilidade.</p></div><div class="product-specs-intro">${specs.intro.map(([label, value]) => `<article><span>${h(label)}</span><strong>${h(value)}</strong></article>`).join('')}</div><div class="product-specs-grid">${specs.groups.map(([title, items]) => `<article><h3>${h(title)}</h3><ul>${items.map((item) => `<li>${h(item)}</li>`).join('')}</ul></article>`).join('')}</div></section><p class="eyebrow">Informações da linhagem</p><h2>Para cada manejo, a ave certa.</h2><p>${product.slug.includes('brown') ? 'A LOHMANN BROWN-LITE atende operações orientadas ao mercado de ovos marrons, com foco em persistência, qualidade de casca e ajuste ao sistema produtivo.' : 'A LOHMANN LSL-LITE atende operações orientadas ao mercado de ovos brancos, com foco em uniformidade, eficiência alimentar e manejo previsível.'}</p><p>Indicadores técnicos devem ser interpretados junto ao manejo, clima, ambiência, mercado de destino e acompanhamento de campo.</p><div class="product-pillars"><section><span>01</span><p>Escolha genética orientada por sistema produtivo.</p></section><section><span>02</span><p>Leitura de consumo, viabilidade, persistência e qualidade de ovos.</p></section><section><span>03</span><p>Suporte técnico para calibragem em campo.</p></section></div></article>`;
 
-  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${h(metaTitle)}</title><meta name="description" content="${h(metaDescription)}"><link rel="canonical" href="${h(origin(env, request))}/linhagens/${h(product.slug)}"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="/assets/site.css"></head><body class="internal-page product-page">${topBarCloud()}${headerCloud('linhagens')}<main>${main}</main>${footerCloud()}<script src="/assets/site.js" defer></script></body></html>`;
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${h(metaTitle)}</title><meta name="description" content="${h(metaDescription)}"><link rel="canonical" href="${h(origin(env, request))}/linhagens/${h(product.slug)}"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="/assets/site.css?v=${ASSET_VERSION}"></head><body class="internal-page product-page">${topBarCloud()}${headerCloud('linhagens')}<main>${main}</main>${footerCloud()}<script src="/assets/site.js?v=${ASSET_VERSION}" defer></script></body></html>`;
 }
 
 function productSpecs(slug) {
