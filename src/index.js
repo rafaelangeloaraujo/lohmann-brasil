@@ -165,13 +165,15 @@ async function products(env, selectedLang = 'pt') {
 }
 
 async function representatives(env) {
-  if (!hasDb(env)) return {};
+  if (!hasDb(env)) return fallbackRepresentativeMap();
   const { results } = await env.DB.prepare(
     `SELECT name, role, uf, region, city, phone, email, photo
      FROM representatives
      WHERE is_active = 1
      ORDER BY uf, sort_order, name`
   ).all();
+
+  if (!results?.length) return fallbackRepresentativeMap();
 
   return results.reduce((grouped, item) => {
     const uf = item.uf || 'BR';
@@ -180,6 +182,54 @@ async function representatives(env) {
       ...item,
       initials: initials(item.name),
       whatsapp: whatsapp(item.phone, item.name),
+    });
+    return grouped;
+  }, {});
+}
+
+function fallbackRepresentativeMap() {
+  const rows = [
+    ['Jalmir', 'Representante comercial', 'RS', 'Rio Grande do Sul', 'RS', '54 99974-8703', 10],
+    ['Silvio', 'Representante comercial', 'SC', 'Santa Catarina', 'SC', '48 99947-1314', 20],
+    ['Alessandro', 'Representante comercial', 'PR', 'Paraná, São Paulo e Goiás', 'PR / SP / GO', '43 99122-3263', 30],
+    ['Alessandro', 'Representante comercial', 'SP', 'Paraná, São Paulo e Goiás', 'PR / SP / GO', '43 99122-3263', 31],
+    ['Alessandro', 'Representante comercial', 'GO', 'Paraná, São Paulo e Goiás', 'PR / SP / GO', '43 99122-3263', 32],
+    ['Carlinhos', 'Representante comercial', 'MS', 'Mato Grosso do Sul e São Paulo (Bastos)', 'MS / Bastos, SP', '14 99857-6450', 40],
+    ['Carlinhos', 'Representante comercial', 'SP', 'Mato Grosso do Sul e São Paulo (Bastos)', 'MS / Bastos, SP', '14 99857-6450', 41],
+    ['Jair', 'Representante comercial', 'SP', 'Atendimento comercial regional', 'SP', '14 99786-7924', 50],
+    ['Matheus Fraga', 'Representante comercial', 'MG', 'Minas Gerais', 'MG', '17 99772-0946', 60],
+    ['Roberson', 'Representante comercial', 'MT', 'Mato Grosso, Rondônia e Acre', 'MT / RO / AC', '66 99995-9998', 70],
+    ['Roberson', 'Representante comercial', 'RO', 'Mato Grosso, Rondônia e Acre', 'MT / RO / AC', '66 99995-9998', 71],
+    ['Roberson', 'Representante comercial', 'AC', 'Mato Grosso, Rondônia e Acre', 'MT / RO / AC', '66 99995-9998', 72],
+    ['Sergio', 'Representante comercial', 'RJ', 'Rio de Janeiro', 'RJ', '24 99264-2238', 80],
+    ['Gilberto', 'Representante comercial', 'ES', 'Espírito Santo', 'ES', '27 99983-7167', 90],
+    ['Cintia', 'Representante comercial', 'TO', 'Tocantins', 'TO', '62 98133-6390', 100],
+    ['Thiago Dias', 'Representante comercial', 'BA', 'Bahia e Sergipe', 'BA / SE', '79 99987-8819', 110],
+    ['Thiago Dias', 'Representante comercial', 'SE', 'Bahia e Sergipe', 'BA / SE', '79 99987-8819', 111],
+    ['Eduardo Galvão', 'Representante comercial', 'AL', 'Alagoas e Pernambuco (São Bento do Una)', 'AL / PE', '82 9 9641-4435', 120],
+    ['Eduardo Galvão', 'Representante comercial', 'PE', 'Alagoas e Pernambuco (São Bento do Una)', 'AL / PE', '82 9 9641-4435', 121],
+    ['Charles Lima', 'Gerente Comercial Norte e Nordeste', 'PE', 'Pernambuco, Paraíba e Rio Grande do Norte', 'PE / PB / RN', '17 99757-0688', 130],
+    ['Charles Lima', 'Gerente Comercial Norte e Nordeste', 'PB', 'Pernambuco, Paraíba e Rio Grande do Norte', 'PE / PB / RN', '17 99757-0688', 131],
+    ['Charles Lima', 'Gerente Comercial Norte e Nordeste', 'RN', 'Pernambuco, Paraíba e Rio Grande do Norte', 'PE / PB / RN', '17 99757-0688', 132],
+    ['Valdir Castiglione', 'Representante comercial', 'CE', 'Ceará, Piauí, Maranhão e Pará', 'CE / PI / MA / PA', '85 98115-9972', 140],
+    ['Valdir Castiglione', 'Representante comercial', 'PI', 'Ceará, Piauí, Maranhão e Pará', 'CE / PI / MA / PA', '85 98115-9972', 141],
+    ['Valdir Castiglione', 'Representante comercial', 'MA', 'Ceará, Piauí, Maranhão e Pará', 'CE / PI / MA / PA', '85 98115-9972', 142],
+    ['Valdir Castiglione', 'Representante comercial', 'PA', 'Ceará, Piauí, Maranhão e Pará', 'CE / PI / MA / PA', '85 98115-9972', 143],
+  ];
+
+  return rows.reduce((grouped, [name, role, uf, region, city, phone]) => {
+    grouped[uf] ||= [];
+    grouped[uf].push({
+      name,
+      role,
+      uf,
+      region,
+      city,
+      phone,
+      email: '',
+      photo: '',
+      initials: initials(name),
+      whatsapp: whatsapp(phone, name),
     });
     return grouped;
   }, {});
