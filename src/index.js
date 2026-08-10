@@ -236,14 +236,36 @@ function fallbackRepresentativeMap() {
 }
 
 async function team(env) {
-  if (!hasDb(env)) return [];
+  if (!hasDb(env)) return fallbackTeamMembers();
   const { results } = await env.DB.prepare(
     `SELECT name, position, region, phone, email, photo
      FROM team_members
      WHERE is_active = 1
      ORDER BY sort_order, name`
   ).all();
+  if (!results?.length) return fallbackTeamMembers();
   return results.map((item) => ({ ...item, initials: initials(item.name), whatsapp: whatsapp(item.phone, item.name) }));
+}
+
+function fallbackTeamMembers() {
+  return [
+    ['Leomar Klassmann', 'Diretor Geral', '17 99645-3745'],
+    ['Marcos Borges', 'Consultor de contas chaves', '17 99714-7837'],
+    ['Charles Lima', 'Gerente Comercial Norte e Nordeste', '17 99757-0688'],
+    ['Matheus Fraga', 'Diretor Técnico', '17 99772-0946'],
+    ['Guilherme Ferreira', 'Analista de programação', '17 99757-2703'],
+    ['Judson Soares', 'Assistente Técnico', '17 99641-3574'],
+    ['Felipe Kawamura', 'Assistente Técnico', '17 99739-3152'],
+  ].map(([name, position, phone]) => ({
+    name,
+    position,
+    region: 'Lohmann do Brasil',
+    phone,
+    email: '',
+    photo: '',
+    initials: initials(name),
+    whatsapp: whatsapp(phone, name),
+  }));
 }
 
 function initials(name) {
