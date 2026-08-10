@@ -272,10 +272,10 @@ async function renderPage(pageKey, request, env) {
   <link rel="stylesheet" href="/assets/site.css">
 </head>
 <body class="${pageKey === 'home' ? '' : 'internal-page'} ${pageKey}-page">
-  ${topBar()}
-  ${header(pageKey)}
+  ${topBarCloud()}
+  ${headerCloud(pageKey)}
   <main>${main}</main>
-  ${footer()}
+  ${footerCloud()}
   <script>window.LohmannRepresentatives = ${JSON.stringify(repRows)}; window.LohmannFallbackRepresentatives = [];</script>
   <script src="/assets/site.js" defer></script>
 </body>
@@ -306,7 +306,7 @@ function footer() {
 }
 
 function renderMain(pageKey, productRows, repRows, teamRows, sections = {}) {
-  if (pageKey === 'home') return home(productRows, sections);
+  if (pageKey === 'home') return homeCloud(productRows, sections);
   if (pageKey === 'sobre') return sobre(teamRows, sections);
   if (pageKey === 'linhagens') return linhagens(productRows, sections);
   if (pageKey === 'representantes') return reps(repRows, sections);
@@ -315,6 +315,50 @@ function renderMain(pageKey, productRows, repRows, teamRows, sections = {}) {
   if (pageKey === 'biblioteca') return simplePage('Biblioteca', 'Planilhas, materiais técnicos e conteúdos de apoio para acompanhamento de sistemas de postura.');
   if (pageKey === 'artigos') return simplePage('Artigos', 'Conteúdos técnicos e institucionais para produtores, granjas e distribuidores.');
   return home(productRows);
+}
+
+function topBarCloud() {
+  return `<div class="top-utility"><div class="top-utility-inner"><strong class="top-brand-name">LOHMANN DO BRASIL <span class="br-flag" aria-hidden="true"></span></strong><div class="top-tools"><div class="top-language" aria-label="Idiomas"><a class="active" href="?lang=pt">PT</a><a href="?lang=en">EN</a><a href="?lang=es">ES</a></div><div class="top-social" aria-label="Redes sociais"><a href="https://instagram.com/lohmanndobrasil" target="_blank" rel="noopener" aria-label="Instagram"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"></rect><circle cx="12" cy="12" r="4"></circle><circle cx="17" cy="7" r="1"></circle></svg></a><a href="https://www.linkedin.com/company/lohmann-do-brasil-avicultura/" target="_blank" rel="noopener" aria-label="LinkedIn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4v11H4z"></path><path d="M6 4.5a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"></path><path d="M10 9h4v1.6c.7-1 1.8-1.9 3.6-1.9 2.7 0 4.4 1.8 4.4 5.2V20h-4v-5.5c0-1.5-.6-2.4-1.9-2.4-1.2 0-2.1.8-2.1 2.4V20h-4z"></path></svg></a></div></div></div></div>`;
+}
+
+function headerCloud(active) {
+  const nav = [
+    ['/', 'Início', 'home'],
+    ['/a-lohmann', 'A Lohmann', 'sobre'],
+    ['/linhagens', 'Linhagens', 'linhagens'],
+    ['/representantes', 'Representantes', 'representantes'],
+    ['/suporte-tecnico', 'Suporte técnico', 'suporte'],
+    ['/biblioteca', 'Biblioteca', 'biblioteca'],
+    ['/artigos', 'Artigos', 'artigos'],
+    ['/#contato', 'Contato', 'contato'],
+    ['/radar-tecnico', '<span></span>Radar Técnico', 'radar'],
+  ].map(([href, label, key]) => `<a class="${key === active ? 'active' : ''} ${key === 'radar' ? 'radar-nav-link' : ''}" href="${href}">${label}</a>`).join('');
+
+  return `<header class="site-header"><a class="brand" href="/" aria-label="Lohmann do Brasil"><img class="logo-top" src="/assets/logo-lohmann-header-white.png" alt="Lohmann do Brasil"><img class="logo-scrolled" src="/assets/logo-lohmann.png" alt="Lohmann do Brasil"></a><button class="menu-toggle" type="button" aria-label="Menu" aria-expanded="false"><span></span><span></span></button><nav class="nav" aria-label="Principal">${nav}</nav><div class="header-actions"><a class="portal-link" href="https://ovoflock.com/login" target="_blank" rel="noopener">Ovoflock</a></div></header>`;
+}
+
+function footerCloud() {
+  return `<footer><a class="brand footer-brand" href="/"><img src="/assets/logo-lohmann-header.png" alt="Lohmann do Brasil"></a><p>Genética como engenharia de sistema.</p><div><a href="/admin">Administração</a><a href="https://ovoflock.com/login" target="_blank" rel="noopener">Ovoflock</a></div><small>&copy; ${new Date().getFullYear()} Lohmann do Brasil</small></footer>`;
+}
+
+function homeCloud(productRows, sections = {}) {
+  const heroTitle = sectionValue(sections, 'hero', 'title_pt', 'A ave certa para o seu sistema produtivo.');
+  const heroText = sectionValue(sections, 'hero', 'text_pt', 'A Lohmann do Brasil combina genética avícola, acompanhamento técnico e leitura de mercado para apoiar sistemas produtivos com previsibilidade, qualidade de ovos e eficiência operacional.');
+  const heroButton = sectionValue(sections, 'hero', 'button_label_pt', 'Conhecer linhagens');
+  const heroUrl = sectionValue(sections, 'hero', 'button_url', '/linhagens');
+
+  return `<section class="hero" id="inicio"><div class="hero-copy reveal"><div class="live-label"><i></i>Genética como engenharia de sistema</div><h1>${h(heroTitle)}</h1><p>${h(heroText)}</p><div class="actions"><a class="button primary" href="${h(heroUrl)}">${h(heroButton)}</a><a class="button ghost" href="#contato">Falar com a equipe</a></div><div class="signal-row"><span><b>01</b> Sistema</span><span><b>02</b> Manejo</span><span><b>03</b> Calibragem</span></div></div><div class="hero-visual" aria-hidden="true"><div class="egg-photo-layer"></div><div class="tech-grid"></div><div class="scan-line"></div><div class="particle particle-a"></div><div class="particle particle-b"></div><div class="particle particle-c"></div><div class="lohmann-l-motion"><span class="l-mark l-mark-large"></span><span class="l-mark l-mark-medium"></span><span class="l-mark l-mark-small"></span></div><div class="data-card"><span>LOHMANN // SYSTEM DATA</span><strong>Calibragem em campo</strong><div class="data-bars"><i></i><i></i><i></i></div><small>Manejo, mercado e suporte técnico</small></div><div class="coordinate">BRASIL<br>REDE TÉCNICA</div></div></section>
+  <section class="proof-bar" aria-label="Diferenciais Lohmann"><article><strong>01</strong><span>Adequação de sistema</span></article><article><strong>02</strong><span>Desempenho acompanhado</span></article><article><strong>03</strong><span>Calibragem em campo</span></article><div class="proof-pulse"><i></i> SISTEMA ATIVO</div></section>
+  <section class="intro section" id="sobre"><div><p class="eyebrow">Lohmann do Brasil</p><h2>${h(sectionValue(sections, 'about', 'title_pt', 'Genética avícola orientada por desempenho, manejo e mercado.'))}</h2></div><div><p>${h(sectionValue(sections, 'about', 'text_pt', 'A Lohmann do Brasil disponibiliza linhagens para diferentes realidades produtivas, com suporte técnico próximo e foco em estabilidade, persistência, qualidade de ovos e adequação ao mercado de destino.'))}</p><p>O trabalho técnico considera as variáveis reais da operação: sistema produtivo, clima, peso de ovo, mercado de destino, manejo disponível e objetivo de desempenho.</p><a class="text-link" href="/a-lohmann">Conhecer a Lohmann <span>+</span></a></div></section>
+  ${productGrid(productRows)}
+  <section class="journey section"><header class="section-heading"><div><p class="eyebrow">Método Lohmann</p><h2>Da decisão de alojamento à performance prevista.</h2></div><p>O trabalho técnico começa antes da ave: leitura do sistema produtivo, definição da linhagem e acompanhamento para manter o potencial genético calibrado em campo.</p></header><div class="journey-grid"><article class="reveal"><span>01</span><div class="journey-icon"><i></i></div><h3>Diagnóstico do sistema</h3><p>Análise de manejo, clima, estrutura, mercado de saída e objetivo produtivo para orientar a escolha genética.</p></article><article class="reveal"><span>02</span><div class="journey-icon"><i></i></div><h3>Linhagem calibrada</h3><p>Portfólio segmentado por variável de manejo, peso de ovo e perfil de operação, sem promessa genérica para todos os sistemas.</p></article><article class="reveal"><span>03</span><div class="journey-icon"><i></i></div><h3>Acompanhamento técnico</h3><p>Suporte regional para interpretar indicadores, ajustar manejo e manter robustez, persistência e viabilidade como métricas de produção.</p></article></div></section>
+  <section class="technical" id="tecnico"><div class="technical-copy reveal"><p class="eyebrow light">Suporte técnico</p><h2>Acompanhamento para transformar potencial genético em resultado previsível.</h2><p>Materiais, treinamentos e atendimento regional apoiam a rotina de manejo, a leitura de indicadores e a tomada de decisão ao longo do ciclo produtivo.</p><a class="button light" href="/suporte-tecnico">Saiba mais</a></div><div class="technical-list"><article><span>01</span><h3>Documentos técnicos</h3><p>Guias e materiais para padronizar leitura de manejo, indicadores e rotina produtiva.</p></article><article><span>02</span><h3>Treinamentos</h3><p>Conteúdo técnico organizado por sistema, etapa produtiva e objetivo de performance.</p></article><article><span>03</span><h3>Gestão de manejo</h3><p>Ferramentas para acompanhar lote, interpretar desvios e antecipar ajustes de manejo.</p></article></div></section>
+  <section class="representatives-shortcut section"><div class="shortcut-copy reveal"><p class="eyebrow">Representantes</p><h2>${h(sectionValue(sections, 'representantes', 'title_pt', 'Rede técnica regional para calibrar decisão e manejo.'))}</h2><p>${h(sectionValue(sections, 'representantes', 'text_pt', 'Encontre o contato responsável pelo seu estado e direcione dúvidas comerciais, técnicas e de distribuição.'))}</p><a class="button primary" href="${h(sectionValue(sections, 'representantes', 'button_url', '/representantes'))}">${h(sectionValue(sections, 'representantes', 'button_label_pt', 'Ver representantes'))}</a></div><div class="shortcut-image reveal" aria-hidden="true"><img src="${h(sectionValue(sections, 'representantes', 'image_path', '/assets/representantes-atalho.png'))}" alt=""></div></section>
+  <section class="innovation"><div class="innovation-visual" aria-hidden="true"><div class="analysis-egg"><span></span><i></i></div><span class="metric metric-one"><b>360°</b> sistema calibrado</span><span class="metric metric-two"><b>24/7</b> dados de produção</span><div class="radar"></div></div><div class="innovation-copy reveal"><p class="eyebrow">Ovoflock</p><h2>Dados de produção e rotina técnica em um só ambiente.</h2><p>Uma plataforma para apoiar o acompanhamento de lotes, indicadores e decisões operacionais com mais organização.</p><ul><li>Indicadores de lote</li><li>Acompanhamento produtivo</li><li>Gestão operacional</li><li>Dados para decisão</li></ul><a class="button primary" href="https://ovoflock.com/login" target="_blank" rel="noopener">Acessar Ovoflock</a></div></section>
+  <section class="news section" id="artigos"><header class="section-heading"><div><p class="eyebrow">Artigos</p><h2>Artigos técnicos e institucionais.</h2></div><p>Conteúdos sobre linhagens, manejo, suporte técnico, mercado e presença da Lohmann do Brasil no setor avícola.</p></header></section>
+  <section class="partners-section section" id="parceiros"><header class="section-heading"><div><p class="eyebrow">Parceiros</p><h2>Relações que fortalecem a presença da Lohmann no campo.</h2></div><p>Empresas parceiras conectam genética, produção, distribuição e mercado com atuação próxima ao setor avícola brasileiro.</p></header><div class="partners-grid"><article class="partner-card reveal"><img src="/assets/partners/tangara.png" alt="Tangará"></article><article class="partner-card reveal"><img src="/assets/partners/ovos-sousa.png" alt="Ovos Sousa"></article></div></section>
+  <section class="technical-radar radar-shortcut section" id="radar-tecnico"><header class="section-heading"><div><p class="eyebrow"><span class="live-dot"></span>Radar Técnico</p><h2>Indicadores de mercado em uma página dedicada.</h2></div><p>Acompanhe referências de mercado para ovos em diferentes praças brasileiras e use os dados como apoio para leitura técnica e comercial.</p></header><a class="button primary" href="/radar-tecnico">Abrir Radar Técnico</a></section>
+  <section class="contact" id="contato"><div class="contact-copy"><p class="eyebrow light">Contato</p><h2>Fale com a equipe Lohmann do Brasil.</h2><p>Envie sua solicitação para direcionarmos o atendimento.</p><address>Rua Theofilo Mancor, 670<br>Nova Granada, SP<br>CEP 15440-000</address></div><form action="/api/contact" method="post" class="contact-form"><label>Nome<input name="name" required></label><label>Empresa<input name="company"></label><label>E-mail<input type="email" name="email" required></label><label>Telefone<input name="phone"></label><label class="wide">Assunto<input name="subject"></label><label class="wide">Mensagem<textarea name="message" rows="4" required></textarea></label><button class="button light" type="submit">Enviar</button></form></section>`;
 }
 
 function home(productRows, sections = {}) {
