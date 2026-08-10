@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "include": [
+    "/",
+    "/a-lohmann",
+    "/linhagens",
+    "/representantes",
+    "/suporte-tecnico",
+    "/biblioteca",
+    "/artigos",
+    "/radar-tecnico",
+    "/admin",
+    "/api/*",
+    "/sitemap.xml",
+    "/robots.txt"
+  ],
+  "exclude": [
+    "/assets/*"
+  ]
+}
