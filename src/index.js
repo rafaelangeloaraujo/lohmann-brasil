@@ -1,5 +1,5 @@
 const LANGS = new Set(['pt', 'en', 'es']);
-const ASSET_VERSION = '20260810-1638';
+const ASSET_VERSION = '20260810-1702';
 
 const ROUTES = {
   '/': 'home',
@@ -494,7 +494,7 @@ function teamMarkup(rows) {
   const members = rows.length ? rows : [
     { name: 'Equipe Lohmann do Brasil', position: 'Atendimento técnico, comercial e institucional', phone: '', initials: 'LB' },
   ];
-  return `<section class="team-section"><div class="content-prose"><p class="eyebrow">Equipe Lohmann do Brasil</p><h2>Pessoas de referência para atendimento técnico, comercial e institucional.</h2><p>A equipe segue a estrutura de contatos para manter um formato organizado para publicação e administração em banco de dados.</p></div><div class="team-grid">${members.map((member) => `<article class="team-card"><figure class="team-photo">${member.photo ? `<img src="${h(member.photo)}" alt="${h(member.name)}">` : `<span>${h(member.initials || initials(member.name))}</span>`}</figure><div><h3>${h(member.name)}</h3><p>${h(member.position)}</p>${member.phone ? `<a href="${h(member.whatsapp || whatsapp(member.phone, member.name))}" target="_blank" rel="noopener">${h(member.phone)}</a>` : ''}</div></article>`).join('')}</div></section>`;
+  return `<section class="team-section"><div class="content-prose"><p class="eyebrow">Equipe Lohmann do Brasil</p><h2>Pessoas de referência para atendimento técnico, comercial e institucional.</h2><p>A equipe segue a estrutura de contatos para manter um formato organizado para publicação e administração em banco de dados.</p></div><div class="team-grid">${members.map((member) => `<article class="team-card"><figure class="team-photo">${member.photo ? `<img src="${h(member.photo)}" alt="${h(member.name)}">` : `<span>${h(member.initials || initials(member.name))}</span>`}</figure><div class="team-info"><h3>${h(member.name)}</h3><p>${h(member.position)}</p>${member.phone ? `<a class="team-whatsapp-link" href="${h(member.whatsapp || whatsapp(member.phone, member.name))}" target="_blank" rel="noopener">${h(member.phone)}</a>` : ''}</div></article>`).join('')}</div></section>`;
 }
 
 function linhagens(productRows) {
