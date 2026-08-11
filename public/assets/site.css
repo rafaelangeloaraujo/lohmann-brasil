@@ -1191,22 +1191,27 @@ body.representantes-page .rep-card a.whatsapp-link:after {
 }
 
 .team-grid {
-  grid-template-columns:repeat(auto-fit,minmax(310px,1fr))!important;
-  gap:18px!important;
+  grid-template-columns:repeat(auto-fit,minmax(380px,1fr))!important;
+  gap:20px!important;
   align-items:stretch!important;
 }
 
 .team-card {
-  grid-template-columns:86px minmax(0,1fr)!important;
+  grid-template-columns:132px minmax(0,1fr)!important;
   align-items:center!important;
-  min-height:148px!important;
-  gap:18px!important;
-  padding:20px!important;
+  min-height:196px!important;
+  gap:22px!important;
+  padding:22px!important;
 }
 
 .team-photo {
-  width:86px!important;
-  height:104px!important;
+  width:132px!important;
+  height:164px!important;
+  border-radius:22px!important;
+}
+
+.team-photo img {
+  object-position:center top!important;
 }
 
 .team-info {
@@ -1259,13 +1264,14 @@ body.representantes-page .rep-card a.whatsapp-link:after {
   }
 
   .team-card {
-    grid-template-columns:72px minmax(0,1fr)!important;
-    min-height:128px!important;
+    grid-template-columns:108px minmax(0,1fr)!important;
+    min-height:160px!important;
+    gap:16px!important;
   }
 
   .team-photo {
-    width:72px!important;
-    height:88px!important;
+    width:108px!important;
+    height:136px!important;
   }
 
   .team-card p {
