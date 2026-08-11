@@ -1,5 +1,5 @@
 const LANGS = new Set(['pt', 'en', 'es']);
-const ASSET_VERSION = '20260810-1702';
+const ASSET_VERSION = '20260811-1608';
 
 const ROUTES = {
   '/': 'home',
@@ -244,28 +244,45 @@ async function team(env) {
      ORDER BY sort_order, name`
   ).all();
   if (!results?.length) return fallbackTeamMembers();
-  return results.map((item) => ({ ...item, initials: initials(item.name), whatsapp: whatsapp(item.phone, item.name) }));
+  return results.map((item) => ({
+    ...item,
+    photo: item.photo || teamPhoto(item.name),
+    initials: initials(item.name),
+    whatsapp: whatsapp(item.phone, item.name),
+  }));
 }
 
 function fallbackTeamMembers() {
   return [
-    ['Leomar Klassmann', 'Diretor Geral', '17 99645-3745'],
-    ['Marcos Borges', 'Consultor de contas chaves', '17 99714-7837'],
-    ['Charles Lima', 'Gerente Comercial Norte e Nordeste', '17 99757-0688'],
-    ['Matheus Fraga', 'Diretor Técnico', '17 99772-0946'],
-    ['Guilherme Ferreira', 'Analista de programação', '17 99757-2703'],
-    ['Judson Soares', 'Assistente Técnico', '17 99641-3574'],
-    ['Felipe Kawamura', 'Assistente Técnico', '17 99739-3152'],
-  ].map(([name, position, phone]) => ({
+    ['Leomar Klassmann', 'Diretor Geral', '17 99645-3745', '/assets/team/leomar-klassmann.jpg'],
+    ['Marcos Borges', 'Consultor de contas chaves', '17 99714-7837', '/assets/team/marcos-borges.jpg'],
+    ['Charles Lima', 'Gerente Comercial Norte e Nordeste', '17 99757-0688', '/assets/team/charles-lima.jpg'],
+    ['Matheus Fraga', 'Diretor Técnico', '17 99772-0946', '/assets/team/matheus-fraga.jpg'],
+    ['Guilherme Ferreira', 'Analista de programação', '17 99757-2703', '/assets/team/guilherme-ferreira.jpg'],
+    ['Judson Soares', 'Assistente Técnico', '17 99641-3574', '/assets/team/judson-soares.jpg'],
+    ['Felipe Kawamura', 'Assistente Técnico', '17 99739-3152', '/assets/team/felipe-kawamura.jpg'],
+  ].map(([name, position, phone, photo]) => ({
     name,
     position,
     region: 'Lohmann do Brasil',
     phone,
     email: '',
-    photo: '',
+    photo,
     initials: initials(name),
     whatsapp: whatsapp(phone, name),
   }));
+}
+
+function teamPhoto(name) {
+  const key = String(name || '').toLowerCase();
+  if (key.includes('leomar')) return '/assets/team/leomar-klassmann.jpg';
+  if (key.includes('marcos')) return '/assets/team/marcos-borges.jpg';
+  if (key.includes('charles')) return '/assets/team/charles-lima.jpg';
+  if (key.includes('matheus')) return '/assets/team/matheus-fraga.jpg';
+  if (key.includes('guilherme')) return '/assets/team/guilherme-ferreira.jpg';
+  if (key.includes('judson')) return '/assets/team/judson-soares.jpg';
+  if (key.includes('felipe')) return '/assets/team/felipe-kawamura.jpg';
+  return '';
 }
 
 function initials(name) {
