@@ -950,6 +950,15 @@ input,textarea,select,button{max-width:100%}
 .product-art .official-hen{max-height:94%;object-fit:contain;object-position:center bottom}
 .analysis-egg{position:absolute;width:232px;height:340px;left:50%;top:50%;transform:translate(-50%,-50%) rotate(2deg);border-radius:50% 50% 46% 46%/58% 58% 42% 42%;background:radial-gradient(circle at 35% 22%,#fff 0 15%,transparent 30%),radial-gradient(circle at 72% 76%,#d8d3c7 0 14%,transparent 34%),linear-gradient(145deg,#fffdf5 0%,#f2eadc 45%,#d7c9b7 100%);box-shadow:0 34px 75px rgba(0,0,0,.38);animation:floatEgg 5s ease-in-out infinite}
 .analysis-egg:before{content:"";position:absolute;inset:16px;border-radius:inherit;border:1px solid rgba(255,255,255,.42);background:linear-gradient(90deg,transparent 0 42%,rgba(255,255,255,.46) 48%,transparent 56%);mix-blend-mode:screen;animation:eggScan 3.8s ease-in-out infinite}
+.library-downloads{margin-top:clamp(34px,5vw,72px);padding:clamp(28px,4vw,48px);border:1px solid rgba(247,168,23,.26);background:#111;color:#fff}
+.library-downloads .section-heading h2,.library-downloads .section-heading p{color:#fff}
+.download-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.download-card{display:grid;gap:16px;align-content:space-between;min-height:210px;padding:24px;border:1px solid rgba(255,255,255,.14);background:linear-gradient(145deg,#171717,#0b0b0b)}
+.download-card span{width:max-content;border-radius:999px;background:#f7a817;color:#111;padding:7px 10px;font-size:11px;font-weight:900;letter-spacing:.12em}
+.download-card h3{margin:0;color:#fff;font-size:clamp(18px,1.6vw,24px);line-height:1.15}
+.download-card .button{width:max-content}
+@media(max-width:900px){.download-grid{grid-template-columns:1fr 1fr}.download-card{min-height:180px}}
+@media(max-width:620px){.download-grid{grid-template-columns:1fr}.library-downloads{padding:24px 18px}}
 .analysis-egg:after{content:"";position:absolute;left:50%;bottom:-32px;width:270px;height:68px;transform:translateX(-50%);border:1px solid rgba(245,163,19,.54);border-radius:50%;box-shadow:0 0 28px rgba(245,163,19,.35),inset 0 0 20px rgba(245,163,19,.22)}
 .analysis-egg span{position:absolute;left:21%;right:21%;top:30%;height:39%;border:1px solid rgba(245,163,19,.56);border-radius:18px;background:linear-gradient(90deg,rgba(245,163,19,.08),rgba(255,255,255,.09));box-shadow:0 0 26px rgba(245,163,19,.25)}
 .analysis-egg span:before,.analysis-egg span:after{content:"";position:absolute;left:14%;right:14%;height:1px;background:rgba(255,255,255,.55)}
