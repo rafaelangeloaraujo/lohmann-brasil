@@ -946,8 +946,9 @@ function localizedHref(href, selectedLang) {
   const hashIndex = href.indexOf('#');
   const base = hashIndex >= 0 ? href.slice(0, hashIndex) : href;
   const hash = hashIndex >= 0 ? href.slice(hashIndex) : '';
-  if (base === '/' || base === '') return `/${selectedLang}${hash}`;
-  return `/${selectedLang}${base}${hash}`;
+  const target = base || '/';
+  const sep = target.includes('?') ? '&' : '?';
+  return `${target}${sep}lang=${selectedLang}${hash}`;
 }
 
 function navLabel(key, selectedLang) {
@@ -1188,5 +1189,5 @@ function localizedHeader(active, selectedLang = 'pt') {
 }
 
 function localizedTopBar(selectedLang = 'pt') {
-  return `<div class="top-utility"><div class="top-utility-inner"><strong class="top-brand-name">LOHMANN DO BRASIL <span class="br-flag" aria-hidden="true"></span></strong><div class="top-tools"><div class="top-language" aria-label="Idiomas"><a class="${selectedLang === 'pt' ? 'active' : ''}" href="/">PT</a><a class="${selectedLang === 'en' ? 'active' : ''}" href="/en">EN</a><a class="${selectedLang === 'es' ? 'active' : ''}" href="/es">ES</a></div><div class="top-social" aria-label="Redes sociais"><a href="https://instagram.com/lohmanndobrasil" target="_blank" rel="noopener" aria-label="Instagram"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"></rect><circle cx="12" cy="12" r="4"></circle><circle cx="17" cy="7" r="1"></circle></svg></a><a href="https://www.linkedin.com/company/lohmann-do-brasil-avicultura/" target="_blank" rel="noopener" aria-label="LinkedIn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4v11H4z"></path><path d="M6 4.5a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"></path><path d="M10 9h4v1.6c.7-1 1.8-1.9 3.6-1.9 2.7 0 4.4 1.8 4.4 5.2V20h-4v-5.5c0-1.5-.6-2.4-1.9-2.4-1.2 0-2.1.8-2.1 2.4V20h-4z"></path></svg></a></div></div></div></div>`;
+  return `<div class="top-utility"><div class="top-utility-inner"><strong class="top-brand-name">LOHMANN DO BRASIL <span class="br-flag" aria-hidden="true"></span></strong><div class="top-tools"><div class="top-language" aria-label="Idiomas"><a class="${selectedLang === 'pt' ? 'active' : ''}" href="/">🇧🇷 PT</a><a class="${selectedLang === 'en' ? 'active' : ''}" href="/?lang=en">🇺🇸 EN</a><a class="${selectedLang === 'es' ? 'active' : ''}" href="/?lang=es">🇪🇸 ES</a></div><div class="top-social" aria-label="Redes sociais"><a href="https://instagram.com/lohmanndobrasil" target="_blank" rel="noopener" aria-label="Instagram"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"></rect><circle cx="12" cy="12" r="4"></circle><circle cx="17" cy="7" r="1"></circle></svg></a><a href="https://www.linkedin.com/company/lohmann-do-brasil-avicultura/" target="_blank" rel="noopener" aria-label="LinkedIn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4v11H4z"></path><path d="M6 4.5a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"></path><path d="M10 9h4v1.6c.7-1 1.8-1.9 3.6-1.9 2.7 0 4.4 1.8 4.4 5.2V20h-4v-5.5c0-1.5-.6-2.4-1.9-2.4-1.2 0-2.1.8-2.1 2.4V20h-4z"></path></svg></a></div></div></div></div>`;
 }
