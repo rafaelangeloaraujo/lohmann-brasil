@@ -49,7 +49,12 @@ const pageFallback = {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const path = normalizePath(url.pathname);
+    let path = normalizePath(url.pathname);
+    const langPrefix = path.match(/^\/(en|es)(\/.*)?$/);
+    if (langPrefix) {
+      url.searchParams.set('lang', langPrefix[1]);
+      path = normalizePath(langPrefix[2] || '/');
+    }
 
     if (path.startsWith('/assets/')) {
       return env.ASSETS ? env.ASSETS.fetch(request) : new Response('Asset not found', { status: 404 });
@@ -97,7 +102,8 @@ function normalizePath(pathname) {
 }
 
 function lang(url) {
-  const value = url.searchParams.get('lang') || 'pt';
+  const pathLang = url.pathname.match(/^\/(en|es)(\/|$)/)?.[1];
+  const value = url.searchParams.get('lang') || pathLang || 'pt';
   return LANGS.has(value) ? value : 'pt';
 }
 
@@ -441,7 +447,7 @@ async function renderPage(pageKey, request, env) {
 </head>
 <body class="${pageKey === 'home' ? '' : 'internal-page'} ${pageKey}-page">
   ${custom.bodyStart}
-  ${translateStatic(topBarCloud(), selectedLang).replace('class="active" href="?lang=pt"', `class="${selectedLang === 'pt' ? 'active' : ''}" href="?lang=pt"`).replace('href="?lang=en"', `class="${selectedLang === 'en' ? 'active' : ''}" href="?lang=en"`).replace('href="?lang=es"', `class="${selectedLang === 'es' ? 'active' : ''}" href="?lang=es"`)}
+  ${localizedTopBar(selectedLang)}
   ${localizedHeader(pageKey, selectedLang)}
   <main>${main}</main>
   ${footerCloud(selectedLang)}
@@ -656,7 +662,7 @@ async function renderProductPage(slug, request, env) {
 
   const main = translateStatic(`<section class="product-hero"><div class="product-hero-copy"><a class="back" href="${localizedHref('/linhagens', selectedLang)}">Voltar</a><p class="eyebrow">Linhagem | ${h(product.egg_color)}</p><h1>${h(product.name)}</h1><p>${h(product.summary)}</p><a class="button primary" href="${localizedHref('/#contato', selectedLang)}">Solicitar diagnóstico técnico</a></div><div class="product-hero-art product-hero-hen" aria-hidden="true"><img src="${image}" alt=""><span>${h(product.egg_color)}</span></div></section><article class="product-content product-content-rich"><section class="product-specs"><div class="product-specs-head"><p class="eyebrow">Dados produtivos</p><h2>Indicadores técnicos da ${h(product.name)}.</h2><p>Informações de referência para análise de potencial produtivo, qualidade de ovos, consumo, peso corporal e viabilidade.</p></div><div class="product-specs-intro">${specs.intro.map(([label, value]) => `<article><span>${h(label)}</span><strong>${h(value)}</strong></article>`).join('')}</div><div class="product-specs-grid">${specs.groups.map(([title, items]) => `<article><h3>${h(title)}</h3><ul>${items.map((item) => `<li>${h(item)}</li>`).join('')}</ul></article>`).join('')}</div></section><p class="eyebrow">Informações da linhagem</p><h2>Para cada manejo, a ave certa.</h2><p>${product.slug.includes('brown') ? 'A LOHMANN BROWN-LITE atende operações orientadas ao mercado de ovos marrons, com foco em persistência, qualidade de casca e ajuste ao sistema produtivo.' : 'A LOHMANN LSL-LITE atende operações orientadas ao mercado de ovos brancos, com foco em uniformidade, eficiência alimentar e manejo previsível.'}</p><p>Indicadores técnicos devem ser interpretados junto ao manejo, clima, ambiência, mercado de destino e acompanhamento de campo.</p><div class="product-pillars"><section><span>01</span><p>Escolha genética orientada por sistema produtivo.</p></section><section><span>02</span><p>Leitura de consumo, viabilidade, persistência e qualidade de ovos.</p></section><section><span>03</span><p>Suporte técnico para calibragem em campo.</p></section></div></article>`, selectedLang);
 
-  return `<!doctype html><html lang="${h(langAttr(selectedLang))}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${h(metaTitle)}</title><meta name="description" content="${h(metaDescription)}"><link rel="canonical" href="${h(origin(env, request))}/linhagens/${h(product.slug)}${selectedLang === 'pt' ? '' : `?lang=${selectedLang}`}"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="/assets/site.css?v=${ASSET_VERSION}">${custom.head}</head><body class="internal-page product-page">${custom.bodyStart}${translateStatic(topBarCloud(), selectedLang).replace('class="active" href="?lang=pt"', `class="${selectedLang === 'pt' ? 'active' : ''}" href="?lang=pt"`).replace('href="?lang=en"', `class="${selectedLang === 'en' ? 'active' : ''}" href="?lang=en"`).replace('href="?lang=es"', `class="${selectedLang === 'es' ? 'active' : ''}" href="?lang=es"`)}${localizedHeader('linhagens', selectedLang)}<main>${main}</main>${footerCloud(selectedLang)}<script src="/assets/site.js?v=${ASSET_VERSION}" defer></script>${custom.bodyEnd}</body></html>`;
+  return `<!doctype html><html lang="${h(langAttr(selectedLang))}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${h(metaTitle)}</title><meta name="description" content="${h(metaDescription)}"><link rel="canonical" href="${h(origin(env, request))}${localizedHref(`/linhagens/${h(product.slug)}`, selectedLang)}"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="/assets/site.css?v=${ASSET_VERSION}">${custom.head}</head><body class="internal-page product-page">${custom.bodyStart}${localizedTopBar(selectedLang)}${localizedHeader('linhagens', selectedLang)}<main>${main}</main>${footerCloud(selectedLang)}<script src="/assets/site.js?v=${ASSET_VERSION}" defer></script>${custom.bodyEnd}</body></html>`;
 }
 
 function productSpecs(slug) {
@@ -940,8 +946,8 @@ function localizedHref(href, selectedLang) {
   const hashIndex = href.indexOf('#');
   const base = hashIndex >= 0 ? href.slice(0, hashIndex) : href;
   const hash = hashIndex >= 0 ? href.slice(hashIndex) : '';
-  const sep = base.includes('?') ? '&' : '?';
-  return `${base}${sep}lang=${selectedLang}${hash}`;
+  if (base === '/' || base === '') return `/${selectedLang}${hash}`;
+  return `/${selectedLang}${base}${hash}`;
 }
 
 function navLabel(key, selectedLang) {
@@ -1179,4 +1185,8 @@ function localizedHeader(active, selectedLang = 'pt') {
     ['/radar-tecnico', `<span></span>${navLabel('radar', selectedLang)}`, 'radar'],
   ].map(([href, label, key]) => `<a class="${key === active ? 'active' : ''} ${key === 'radar' ? 'radar-nav-link' : ''}" href="${localizedHref(href, selectedLang)}">${label}</a>`).join('');
   return `<header class="site-header"><a class="brand" href="${localizedHref('/', selectedLang)}" aria-label="Lohmann do Brasil"><img class="logo-top" src="/assets/logo-lohmann-header-white.png" alt="Lohmann do Brasil"><img class="logo-scrolled" src="/assets/logo-lohmann.png" alt="Lohmann do Brasil"></a><button class="menu-toggle" type="button" aria-label="Menu" aria-expanded="false"><span></span><span></span></button><nav class="nav" aria-label="Principal">${nav}</nav><div class="header-actions"><a class="portal-link" href="https://ovoflock.com/login" target="_blank" rel="noopener">Ovoflock</a></div></header>`;
+}
+
+function localizedTopBar(selectedLang = 'pt') {
+  return `<div class="top-utility"><div class="top-utility-inner"><strong class="top-brand-name">LOHMANN DO BRASIL <span class="br-flag" aria-hidden="true"></span></strong><div class="top-tools"><div class="top-language" aria-label="Idiomas"><a class="${selectedLang === 'pt' ? 'active' : ''}" href="/">PT</a><a class="${selectedLang === 'en' ? 'active' : ''}" href="/en">EN</a><a class="${selectedLang === 'es' ? 'active' : ''}" href="/es">ES</a></div><div class="top-social" aria-label="Redes sociais"><a href="https://instagram.com/lohmanndobrasil" target="_blank" rel="noopener" aria-label="Instagram"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"></rect><circle cx="12" cy="12" r="4"></circle><circle cx="17" cy="7" r="1"></circle></svg></a><a href="https://www.linkedin.com/company/lohmann-do-brasil-avicultura/" target="_blank" rel="noopener" aria-label="LinkedIn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4v11H4z"></path><path d="M6 4.5a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"></path><path d="M10 9h4v1.6c.7-1 1.8-1.9 3.6-1.9 2.7 0 4.4 1.8 4.4 5.2V20h-4v-5.5c0-1.5-.6-2.4-1.9-2.4-1.2 0-2.1.8-2.1 2.4V20h-4z"></path></svg></a></div></div></div></div>`;
 }
