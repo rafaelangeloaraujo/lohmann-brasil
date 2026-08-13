@@ -643,7 +643,7 @@ function bibliotecaPage() {
     ['02', 'Controle de produção e indicadores', 'Materiais de apoio para registrar informações operacionais e acompanhar desvios ao longo do ciclo produtivo.'],
     ['03', 'Materiais de manejo e decisão', 'Arquivos voltados à padronização de consultas técnicas, histórico de lotes e acompanhamento em campo.'],
   ];
-  return `<section class="internal-hero"><p class="eyebrow">Biblioteca</p><h1>Planilhas e materiais de apoio técnico.</h1><p>A biblioteca organiza arquivos de consulta para acompanhamento de lotes, leitura de indicadores e apoio à rotina de manejo.</p></section><section class="content-bands content-bands-rich library-page"><div class="content-grid">${items.map(([n, title, text]) => `<article class="content-card"><span>${n}</span><h2>${title}</h2><p>${text}</p></article>`).join('')}</div><div class="page-cta"><div><p class="eyebrow">Origem das planilhas</p><h2>Conteúdo baseado na área de planilhas do site antigo.</h2><p>Esta página pode receber os links diretos ou arquivos importados no painel conforme os materiais forem liberados para publicação.</p></div><a class="button primary" href="https://ltz.com.br/aba-planilhas" target="_blank" rel="noopener">Abrir site antigo</a></div></section>`;
+  return `<section class="internal-hero"><p class="eyebrow">Biblioteca</p><h1>Planilhas e materiais de apoio técnico.</h1><p>A biblioteca organiza arquivos de consulta para acompanhamento de lotes, leitura de indicadores e apoio à rotina de manejo.</p></section><section class="content-bands content-bands-rich library-page"><div class="content-grid">${items.map(([n, title, text]) => `<article class="content-card"><span>${n}</span><h2>${title}</h2><p>${text}</p></article>`).join('')}</div>${libraryDownloads('pt')}</section>`;
 }
 
 function artigosPage() {
@@ -1157,11 +1157,28 @@ function translatedSupport(selectedLang, t) {
 }
 
 function translatedLibrary(selectedLang, t) {
-  return `<section class="internal-hero"><p class="eyebrow">${navLabel('biblioteca', selectedLang)}</p><h1>${h(t.libraryPageTitle)}</h1><p>${selectedLang === 'es' ? 'La biblioteca organiza archivos de consulta para seguimiento de lotes, indicadores y rutina de manejo.' : 'The library organizes reference files for flock monitoring, indicator reading and management routines.'}</p></section><section class="content-bands content-bands-rich library-page"><div class="content-grid"><article class="content-card"><span>01</span><h2>${selectedLang === 'es' ? 'Planillas de seguimiento de lote' : 'Flock monitoring spreadsheets'}</h2><p>${selectedLang === 'es' ? 'Modelos para organizar producción, consumo, mortalidad, peso de huevos y rutina técnica.' : 'Templates to organize production, feed intake, mortality, egg weight and technical routine.'}</p></article><article class="content-card"><span>02</span><h2>${selectedLang === 'es' ? 'Control de producción e indicadores' : 'Production and indicator control'}</h2><p>${selectedLang === 'es' ? 'Materiales de apoyo para registrar datos operativos.' : 'Support materials to record operational data.'}</p></article></div></section>`;
+  return `<section class="internal-hero"><p class="eyebrow">${navLabel('biblioteca', selectedLang)}</p><h1>${h(t.libraryPageTitle)}</h1><p>${selectedLang === 'es' ? 'La biblioteca organiza archivos de consulta para seguimiento de lotes, indicadores y rutina de manejo.' : 'The library organizes reference files for flock monitoring, indicator reading and management routines.'}</p></section><section class="content-bands content-bands-rich library-page"><div class="content-grid"><article class="content-card"><span>01</span><h2>${selectedLang === 'es' ? 'Planillas de seguimiento de lote' : 'Flock monitoring spreadsheets'}</h2><p>${selectedLang === 'es' ? 'Modelos para organizar producción, consumo, mortalidad, peso de huevos y rutina técnica.' : 'Templates to organize production, feed intake, mortality, egg weight and technical routine.'}</p></article><article class="content-card"><span>02</span><h2>${selectedLang === 'es' ? 'Control de producción e indicadores' : 'Production and indicator control'}</h2><p>${selectedLang === 'es' ? 'Materiales de apoyo para registrar datos operativos.' : 'Support materials to record operational data.'}</p></article></div>${libraryDownloads(selectedLang)}</section>`;
 }
 
 function translatedArticles(selectedLang, t) {
   return `<section class="internal-hero"><p class="eyebrow">${navLabel('artigos', selectedLang)}</p><h1>${h(t.articlesPageTitle)}</h1><p>${selectedLang === 'es' ? 'Artículos, comunicados y materiales sobre genética, manejo, soporte técnico y mercado.' : 'Articles, notices and materials about genetics, management, technical support and market.'}</p></section><section class="content-bands content-bands-rich"><div class="content-grid"><article class="content-card"><span>01</span><h2>${selectedLang === 'es' ? 'La ave adecuada para cada manejo' : 'The right bird for every management system'}</h2><p>${selectedLang === 'es' ? 'Contenido sobre elección de línea según sistema, clima, mercado y objetivo.' : 'Content about strain choice by system, climate, market and goal.'}</p></article><article class="content-card"><span>02</span><h2>${selectedLang === 'es' ? 'Bienestar como variable de eficiencia' : 'Welfare as an efficiency variable'}</h2><p>${selectedLang === 'es' ? 'Materiales sobre viabilidad, estrés, plumas, mortalidad y resultado productivo.' : 'Materials about viability, stress, feather cover, mortality and production result.'}</p></article></div></section>`;
+}
+
+function libraryDownloads(selectedLang = 'pt') {
+  const labels = {
+    pt: { eyebrow: 'Arquivos disponíveis', title: 'Materiais para download', desc: 'Baixe PDFs e planilhas de gestão de lote para LOHMANN LSL-LITE e LOHMANN BROWN-LITE.', button: 'Baixar arquivo' },
+    en: { eyebrow: 'Available files', title: 'Download materials', desc: 'Download PDFs and flock management spreadsheets for LOHMANN LSL-LITE and LOHMANN BROWN-LITE.', button: 'Download file' },
+    es: { eyebrow: 'Archivos disponibles', title: 'Materiales para descarga', desc: 'Descargue PDFs y planillas de gestión de lote para LOHMANN LSL-LITE y LOHMANN BROWN-LITE.', button: 'Descargar archivo' },
+  }[selectedLang] || {};
+  const files = [
+    ['PDF', 'Gestão de Lote BROWN-LITE', 'gestao-lote-brown-lite.pdf'],
+    ['PDF', 'Gestão de Lote LSL-LITE', 'gestao-lote-lsl-lite.pdf'],
+    ['XLSX', 'Gestão de Lote Diário Max e Min - LOHMANN BROWN', 'gestao-diaria-brown-ovos-1-galpao.xlsx'],
+    ['XLSX', 'Gestão de Lote Diário Max e Min - LOHMANN LSL', 'gestao-diaria-lsl-ovos-1-galpao.xlsx'],
+    ['XLSX', 'Planilha de Gestão Max e Min - LOHMANN BROWN LITE - 2025', 'planilha-gestao-max-min-brown-lite-2025.xlsx'],
+    ['XLSX', 'Planilha de Gestão Max e Min - LOHMANN LSL LITE - 2025', 'planilha-gestao-max-min-lsl-lite-2025.xlsx'],
+  ];
+  return `<section class="library-downloads"><header class="section-heading"><div><p class="eyebrow">${h(labels.eyebrow)}</p><h2>${h(labels.title)}</h2></div><p>${h(labels.desc)}</p></header><div class="download-grid">${files.map(([type, title, file]) => `<article class="download-card"><span>${h(type)}</span><h3>${h(title)}</h3><a class="button primary" href="/assets/biblioteca/${h(file)}" download>${h(labels.button)}</a></article>`).join('')}</div></section>`;
 }
 
 function translatedRadar(selectedLang, t) {
