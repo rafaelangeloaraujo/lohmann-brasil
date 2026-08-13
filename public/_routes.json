@@ -2,6 +2,10 @@
   "version": 1,
   "include": [
     "/",
+    "/en",
+    "/en/*",
+    "/es",
+    "/es/*",
     "/a-lohmann",
     "/linhagens",
     "/linhagens/*",
