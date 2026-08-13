@@ -1,5 +1,5 @@
 const LANGS = new Set(['pt', 'en', 'es']);
-const ASSET_VERSION = '20260811-1608';
+const ASSET_VERSION = '20260812-1015';
 
 const ROUTES = {
   '/': 'home',
@@ -153,7 +153,7 @@ function securityHeaders() {
 }
 
 async function products(env, selectedLang = 'pt') {
-  if (!hasDb(env)) return [];
+  if (!hasDb(env)) return fallbackProducts(selectedLang);
   const column = selectedLang === 'en' ? 'summary_en' : selectedLang === 'es' ? 'summary_es' : 'summary_pt';
   const { results } = await env.DB.prepare(
     `SELECT slug, name, category, egg_color, ${column} AS summary, image
@@ -161,7 +161,11 @@ async function products(env, selectedLang = 'pt') {
      WHERE status = 'published'
      ORDER BY CASE WHEN slug = 'lohmann-lsl-lite' THEN 0 WHEN slug = 'lohmann-brown-lite' THEN 1 ELSE 2 END, sort_order, name`
   ).all();
-  return results;
+  return (results || []).map((product) => ({
+    ...product,
+    egg_color: translatedEggColor(product.egg_color, selectedLang),
+    summary: product.summary || fallbackProductSummary(product.slug, selectedLang),
+  }));
 }
 
 async function representatives(env) {
@@ -296,18 +300,23 @@ function whatsapp(phone, name) {
   return `https://wa.me/${number}?text=${encodeURIComponent(`Olá, vim pelo site da Lohmann do Brasil e gostaria de falar com ${name || 'um representante'}.`)}`;
 }
 
-async function seo(env, pageKey, request) {
+async function seo(env, pageKey, request, selectedLang = 'pt') {
   const fallback = pageFallback[pageKey] || pageFallback.home;
   const row = hasDb(env)
     ? await env.DB.prepare('SELECT * FROM seo_pages WHERE page_key = ? LIMIT 1').bind(pageKey).first().catch(() => null)
     : null;
   const base = origin(env, request);
   const path = ROUTES_REVERSE[pageKey] || '/';
+  const suffix = selectedLang === 'pt' ? '' : `?lang=${selectedLang}`;
+  const titleField = selectedLang === 'en' ? 'title_en' : selectedLang === 'es' ? 'title_es' : 'title_pt';
+  const descriptionField = selectedLang === 'en' ? 'description_en' : selectedLang === 'es' ? 'description_es' : 'description_pt';
+  const keywordsField = selectedLang === 'en' ? 'keywords_en' : selectedLang === 'es' ? 'keywords_es' : 'keywords_pt';
+  const fallbackMeta = translatedMeta(pageKey, selectedLang, fallback);
   return {
-    title: row?.title_pt || fallback.title,
-    description: row?.description_pt || fallback.description,
-    keywords: row?.keywords_pt || '',
-    canonical: `${base}${path}`,
+    title: row?.[titleField] || fallbackMeta.title,
+    description: row?.[descriptionField] || fallbackMeta.description,
+    keywords: row?.[keywordsField] || '',
+    canonical: `${base}${path}${suffix}`,
     ogImage: `${base}${row?.og_image || '/assets/logo-lohmann.png'}`,
     robots: row?.robots || 'index,follow',
     geoRegion: row?.geo_region || 'BR-SP',
@@ -354,18 +363,60 @@ function fallbackRepresentatives() {
   ];
 }
 
+function translatedMeta(pageKey, selectedLang, fallback) {
+  if (selectedLang === 'pt') return fallback;
+  const en = {
+    home: ['Lohmann do Brasil | Poultry genetics and technical support', 'Layer strains, technical support and information for producers, farms and distributors in Brazil.'],
+    sobre: ['About Lohmann | Lohmann do Brasil', 'Institutional presence of Lohmann do Brasil in layer genetics, technical support and the poultry sector.'],
+    linhagens: ['Lohmann Strains | Lohmann do Brasil', 'LOHMANN LSL-LITE and LOHMANN BROWN-LITE strains for different production systems and markets.'],
+    representantes: ['Representatives | Lohmann do Brasil', 'Find Lohmann do Brasil representatives by state for technical and commercial service.'],
+    radar: ['Technical Radar | Lohmann do Brasil', 'Market indicators to support technical reading in the poultry sector.'],
+  };
+  const es = {
+    home: ['Lohmann do Brasil | Genética avícola y soporte técnico', 'Líneas de postura, soporte técnico e información para productores, granjas y distribuidores en Brasil.'],
+    sobre: ['La Lohmann | Lohmann do Brasil', 'Actuación institucional de Lohmann do Brasil en genética de postura, soporte técnico y sector avícola.'],
+    linhagens: ['Líneas Lohmann | Lohmann do Brasil', 'Líneas LOHMANN LSL-LITE y LOHMANN BROWN-LITE para diferentes sistemas productivos y mercados.'],
+    representantes: ['Representantes | Lohmann do Brasil', 'Encuentre representantes de Lohmann do Brasil por estado para atención técnica y comercial.'],
+    radar: ['Radar Técnico | Lohmann do Brasil', 'Indicadores de mercado para apoyar la lectura técnica del sector avícola.'],
+  };
+  const item = (selectedLang === 'es' ? es : en)[pageKey];
+  return item ? { title: item[0], description: item[1] } : fallback;
+}
+
+function emptyCustomCodes() {
+  return { head: '', bodyStart: '', bodyEnd: '' };
+}
+
+async function customCodes(env) {
+  if (!hasDb(env)) return emptyCustomCodes();
+  const { results } = await env.DB.prepare(
+    `SELECT location, code FROM custom_codes WHERE is_active = 1 ORDER BY sort_order, id`
+  ).all();
+  const snippets = emptyCustomCodes();
+  for (const row of results || []) {
+    const code = String(row.code || '').trim();
+    if (!code) continue;
+    const location = String(row.location || 'head').trim();
+    if (location === 'body_start') snippets.bodyStart += `\n${code}`;
+    else if (location === 'body_end') snippets.bodyEnd += `\n${code}`;
+    else snippets.head += `\n${code}`;
+  }
+  return snippets;
+}
+
 async function renderPage(pageKey, request, env) {
   const url = new URL(request.url);
   const selectedLang = lang(url);
-  const meta = await seo(env, pageKey, request);
+  const meta = await seo(env, pageKey, request, selectedLang);
   const productRows = await products(env, selectedLang).catch(() => []);
   const repRows = pageKey === 'representantes' ? await representatives(env).catch(() => ({})) : {};
   const teamRows = pageKey === 'sobre' ? await team(env).catch(() => []) : [];
   const sections = await pageSections(env, pageKey).catch(() => ({}));
-  const main = renderMain(pageKey, productRows, repRows, teamRows, sections);
+  const custom = await customCodes(env).catch(() => emptyCustomCodes());
+  const main = renderMain(pageKey, productRows, repRows, teamRows, sections, selectedLang);
 
   return `<!doctype html>
-<html lang="pt-BR">
+<html lang="${h(langAttr(selectedLang))}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -386,14 +437,17 @@ async function renderPage(pageKey, request, env) {
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/site.css?v=${ASSET_VERSION}">
+  ${custom.head}
 </head>
 <body class="${pageKey === 'home' ? '' : 'internal-page'} ${pageKey}-page">
-  ${topBarCloud()}
-  ${headerCloud(pageKey)}
+  ${custom.bodyStart}
+  ${translateStatic(topBarCloud(), selectedLang).replace('class="active" href="?lang=pt"', `class="${selectedLang === 'pt' ? 'active' : ''}" href="?lang=pt"`).replace('href="?lang=en"', `class="${selectedLang === 'en' ? 'active' : ''}" href="?lang=en"`).replace('href="?lang=es"', `class="${selectedLang === 'es' ? 'active' : ''}" href="?lang=es"`)}
+  ${localizedHeader(pageKey, selectedLang)}
   <main>${main}</main>
-  ${footerCloud()}
+  ${footerCloud(selectedLang)}
   <script>window.LohmannRepresentatives = ${JSON.stringify(repRows)}; window.LohmannFallbackRepresentatives = ${JSON.stringify(fallbackRepresentatives())};</script>
   <script src="/assets/site.js?v=${ASSET_VERSION}" defer></script>
+  ${custom.bodyEnd}
 </body>
 </html>`;
 }
@@ -421,16 +475,17 @@ function footer() {
   return `<footer><a class="brand footer-brand" href="/"><img src="/assets/logo-lohmann-header.png" alt="Lohmann do Brasil"></a><p>Genética como engenharia de sistema.</p><div><a href="/admin">Administração</a><a href="https://ovoflock.com/login" target="_blank" rel="noopener">Ovoflock</a></div><small>&copy; ${new Date().getFullYear()} Lohmann do Brasil</small></footer>`;
 }
 
-function renderMain(pageKey, productRows, repRows, teamRows, sections = {}) {
-  if (pageKey === 'home') return homeCloud(productRows, sections);
-  if (pageKey === 'sobre') return sobre(teamRows, sections);
-  if (pageKey === 'linhagens') return linhagens(productRows, sections);
-  if (pageKey === 'representantes') return reps(repRows, sections);
-  if (pageKey === 'radar') return radar(sections);
+function renderMain(pageKey, productRows, repRows, teamRows, sections = {}, selectedLang = 'pt') {
+  if (selectedLang !== 'pt') return translatedPage(pageKey, productRows, repRows, teamRows, selectedLang);
+  if (pageKey === 'home') return translateStatic(homeCloud(productRows, sections), selectedLang);
+  if (pageKey === 'sobre') return translateStatic(sobre(teamRows, sections), selectedLang);
+  if (pageKey === 'linhagens') return translateStatic(linhagens(productRows, sections), selectedLang);
+  if (pageKey === 'representantes') return translateStatic(reps(repRows, sections), selectedLang);
+  if (pageKey === 'radar') return translateStatic(radar(sections), selectedLang);
   if (pageKey === 'suporte') return simplePage('Suporte técnico', 'Acompanhamento técnico para manejo, leitura de indicadores e organização da rotina produtiva.');
   if (pageKey === 'biblioteca') return simplePage('Biblioteca', 'Planilhas, materiais técnicos e conteúdos de apoio para acompanhamento de sistemas de postura.');
   if (pageKey === 'artigos') return simplePage('Artigos', 'Conteúdos técnicos e institucionais para produtores, granjas e distribuidores.');
-  return home(productRows);
+  return translateStatic(home(productRows), selectedLang);
 }
 
 function topBarCloud() {
@@ -496,11 +551,31 @@ function productGrid(productRows) {
   return `<section class="products section" id="linhagens"><header class="section-heading"><div><p class="eyebrow">Portfólio Lohmann</p><h2>Linhagens calibradas por manejo, clima e mercado.</h2></div></header><div class="product-grid">${rows.map((product, index) => `<article class="product-card reveal"><div class="product-art product-art-${index + 1}"><span>0${index + 1}</span><img class="product-hen official-hen" src="/assets/${product.slug.includes('brown') ? 'galinha-marron-oficial-lohmann.png' : 'galinha-branca-oficial-lohmann.png'}" alt="${h(product.name)}"></div><div class="product-copy"><small>${h(product.egg_color)}</small><h3>${h(product.name)}</h3><p>${h(product.summary)}</p><a href="/linhagens/${h(product.slug)}">Ver detalhes <b>+</b></a></div></article>`).join('')}</div></section>`;
 }
 
-function fallbackProducts() {
+function fallbackProducts(selectedLang = 'pt') {
   return [
-    { slug: 'lohmann-lsl-lite', name: 'LOHMANN LSL-LITE', egg_color: 'Ovos brancos', summary: 'Linhagem calibrada para uniformidade, eficiência alimentar e manejo previsível.' },
-    { slug: 'lohmann-brown-lite', name: 'LOHMANN BROWN-LITE', egg_color: 'Ovos marrons', summary: 'Linhagem projetada para eficiência, persistência e ajuste ao mercado.' },
+    { slug: 'lohmann-lsl-lite', name: 'LOHMANN LSL-LITE', egg_color: translatedEggColor('Ovos brancos', selectedLang), summary: fallbackProductSummary('lohmann-lsl-lite', selectedLang) },
+    { slug: 'lohmann-brown-lite', name: 'LOHMANN BROWN-LITE', egg_color: translatedEggColor('Ovos marrons', selectedLang), summary: fallbackProductSummary('lohmann-brown-lite', selectedLang) },
   ];
+}
+
+function translatedEggColor(value, selectedLang = 'pt') {
+  const normalized = String(value || '').toLowerCase();
+  if (selectedLang === 'en') return normalized.includes('marrom') || normalized.includes('brown') ? 'Brown eggs' : 'White eggs';
+  if (selectedLang === 'es') return normalized.includes('marrom') || normalized.includes('brown') || normalized.includes('marr') ? 'Huevos marrones' : 'Huevos blancos';
+  return value || 'Ovos';
+}
+
+function fallbackProductSummary(slug, selectedLang = 'pt') {
+  const brown = String(slug || '').includes('brown');
+  if (selectedLang === 'en') return brown
+    ? 'A brown egg strain designed for efficiency, persistence and market fit.'
+    : 'A white egg strain calibrated for uniformity, feed efficiency and predictable management.';
+  if (selectedLang === 'es') return brown
+    ? 'Línea para huevos marrones diseñada para eficiencia, persistencia y ajuste al mercado.'
+    : 'Línea para huevos blancos calibrada para uniformidad, eficiencia alimentaria y manejo previsible.';
+  return brown
+    ? 'Linhagem projetada para eficiência, persistência e ajuste ao mercado.'
+    : 'Linhagem calibrada para uniformidade, eficiência alimentar e manejo previsível.';
 }
 
 function sobre(teamRows) {
@@ -572,15 +647,16 @@ function artigosPage() {
 async function renderProductPage(slug, request, env) {
   const selectedLang = lang(new URL(request.url));
   const rows = await products(env, selectedLang).catch(() => []);
-  const product = (rows.length ? rows : fallbackProducts()).find((item) => item.slug === slug) || fallbackProducts()[0];
+  const product = (rows.length ? rows : fallbackProducts(selectedLang)).find((item) => item.slug === slug) || fallbackProducts(selectedLang)[0];
+  const custom = await customCodes(env).catch(() => emptyCustomCodes());
   const specs = productSpecs(product.slug);
   const image = product.slug.includes('brown') ? '/assets/galinha-marron-oficial-lohmann.png' : '/assets/galinha-branca-oficial-lohmann.png';
   const metaTitle = `${product.name} | Lohmann do Brasil`;
-  const metaDescription = product.summary || 'Linhagem Lohmann para sistemas de postura comercial.';
+  const metaDescription = product.summary || (selectedLang === 'es' ? 'Línea Lohmann para sistemas comerciales de postura.' : selectedLang === 'en' ? 'Lohmann strain for commercial layer systems.' : 'Linhagem Lohmann para sistemas de postura comercial.');
 
-  const main = `<section class="product-hero"><div class="product-hero-copy"><a class="back" href="/linhagens">Voltar</a><p class="eyebrow">Linhagem | ${h(product.egg_color)}</p><h1>${h(product.name)}</h1><p>${h(product.summary)}</p><a class="button primary" href="/#contato">Solicitar diagnóstico técnico</a></div><div class="product-hero-art product-hero-hen" aria-hidden="true"><img src="${image}" alt=""><span>${h(product.egg_color)}</span></div></section><article class="product-content product-content-rich"><section class="product-specs"><div class="product-specs-head"><p class="eyebrow">Dados produtivos</p><h2>Indicadores técnicos da ${h(product.name)}.</h2><p>Informações de referência para análise de potencial produtivo, qualidade de ovos, consumo, peso corporal e viabilidade.</p></div><div class="product-specs-intro">${specs.intro.map(([label, value]) => `<article><span>${h(label)}</span><strong>${h(value)}</strong></article>`).join('')}</div><div class="product-specs-grid">${specs.groups.map(([title, items]) => `<article><h3>${h(title)}</h3><ul>${items.map((item) => `<li>${h(item)}</li>`).join('')}</ul></article>`).join('')}</div></section><p class="eyebrow">Informações da linhagem</p><h2>Para cada manejo, a ave certa.</h2><p>${product.slug.includes('brown') ? 'A LOHMANN BROWN-LITE atende operações orientadas ao mercado de ovos marrons, com foco em persistência, qualidade de casca e ajuste ao sistema produtivo.' : 'A LOHMANN LSL-LITE atende operações orientadas ao mercado de ovos brancos, com foco em uniformidade, eficiência alimentar e manejo previsível.'}</p><p>Indicadores técnicos devem ser interpretados junto ao manejo, clima, ambiência, mercado de destino e acompanhamento de campo.</p><div class="product-pillars"><section><span>01</span><p>Escolha genética orientada por sistema produtivo.</p></section><section><span>02</span><p>Leitura de consumo, viabilidade, persistência e qualidade de ovos.</p></section><section><span>03</span><p>Suporte técnico para calibragem em campo.</p></section></div></article>`;
+  const main = translateStatic(`<section class="product-hero"><div class="product-hero-copy"><a class="back" href="${localizedHref('/linhagens', selectedLang)}">Voltar</a><p class="eyebrow">Linhagem | ${h(product.egg_color)}</p><h1>${h(product.name)}</h1><p>${h(product.summary)}</p><a class="button primary" href="${localizedHref('/#contato', selectedLang)}">Solicitar diagnóstico técnico</a></div><div class="product-hero-art product-hero-hen" aria-hidden="true"><img src="${image}" alt=""><span>${h(product.egg_color)}</span></div></section><article class="product-content product-content-rich"><section class="product-specs"><div class="product-specs-head"><p class="eyebrow">Dados produtivos</p><h2>Indicadores técnicos da ${h(product.name)}.</h2><p>Informações de referência para análise de potencial produtivo, qualidade de ovos, consumo, peso corporal e viabilidade.</p></div><div class="product-specs-intro">${specs.intro.map(([label, value]) => `<article><span>${h(label)}</span><strong>${h(value)}</strong></article>`).join('')}</div><div class="product-specs-grid">${specs.groups.map(([title, items]) => `<article><h3>${h(title)}</h3><ul>${items.map((item) => `<li>${h(item)}</li>`).join('')}</ul></article>`).join('')}</div></section><p class="eyebrow">Informações da linhagem</p><h2>Para cada manejo, a ave certa.</h2><p>${product.slug.includes('brown') ? 'A LOHMANN BROWN-LITE atende operações orientadas ao mercado de ovos marrons, com foco em persistência, qualidade de casca e ajuste ao sistema produtivo.' : 'A LOHMANN LSL-LITE atende operações orientadas ao mercado de ovos brancos, com foco em uniformidade, eficiência alimentar e manejo previsível.'}</p><p>Indicadores técnicos devem ser interpretados junto ao manejo, clima, ambiência, mercado de destino e acompanhamento de campo.</p><div class="product-pillars"><section><span>01</span><p>Escolha genética orientada por sistema produtivo.</p></section><section><span>02</span><p>Leitura de consumo, viabilidade, persistência e qualidade de ovos.</p></section><section><span>03</span><p>Suporte técnico para calibragem em campo.</p></section></div></article>`, selectedLang);
 
-  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${h(metaTitle)}</title><meta name="description" content="${h(metaDescription)}"><link rel="canonical" href="${h(origin(env, request))}/linhagens/${h(product.slug)}"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="/assets/site.css?v=${ASSET_VERSION}"></head><body class="internal-page product-page">${topBarCloud()}${headerCloud('linhagens')}<main>${main}</main>${footerCloud()}<script src="/assets/site.js?v=${ASSET_VERSION}" defer></script></body></html>`;
+  return `<!doctype html><html lang="${h(langAttr(selectedLang))}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${h(metaTitle)}</title><meta name="description" content="${h(metaDescription)}"><link rel="canonical" href="${h(origin(env, request))}/linhagens/${h(product.slug)}${selectedLang === 'pt' ? '' : `?lang=${selectedLang}`}"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="/assets/site.css?v=${ASSET_VERSION}">${custom.head}</head><body class="internal-page product-page">${custom.bodyStart}${translateStatic(topBarCloud(), selectedLang).replace('class="active" href="?lang=pt"', `class="${selectedLang === 'pt' ? 'active' : ''}" href="?lang=pt"`).replace('href="?lang=en"', `class="${selectedLang === 'en' ? 'active' : ''}" href="?lang=en"`).replace('href="?lang=es"', `class="${selectedLang === 'es' ? 'active' : ''}" href="?lang=es"`)}${localizedHeader('linhagens', selectedLang)}<main>${main}</main>${footerCloud(selectedLang)}<script src="/assets/site.js?v=${ASSET_VERSION}" defer></script>${custom.bodyEnd}</body></html>`;
 }
 
 function productSpecs(slug) {
@@ -665,6 +741,7 @@ async function adminApp(request, env) {
       <button data-admin-tab="dashboard" class="is-active">Visão geral</button>
       <button data-admin-tab="content">Textos e botões</button>
       <button data-admin-tab="seo">SEO e GEO</button>
+      <button data-admin-tab="customCodes">Pixels e scripts</button>
       <button data-admin-tab="products">Linhagens</button>
       <button data-admin-tab="representatives">Representantes</button>
       <button data-admin-tab="team">Equipe</button>
@@ -707,6 +784,7 @@ async function adminApi(request, env, path) {
   if (resource === 'content') return listEditableSections(env, url);
   if (resource === 'seo') return listSeoPages(env);
   if (resource === 'contacts') return listContacts(env);
+  if (resource === 'custom-codes') return tableEndpoint(request, env, 'custom_codes', adminTables.customCodes);
   if (resource === 'products') return tableEndpoint(request, env, 'products', adminTables.products);
   if (resource === 'representatives') return tableEndpoint(request, env, 'representatives', adminTables.representatives);
   if (resource === 'team') return tableEndpoint(request, env, 'team_members', adminTables.team);
@@ -724,10 +802,11 @@ const adminTables = {
   documents: ['title', 'category', 'description', 'file_path', 'mime_type', 'access_level', 'is_active'],
   content: ['label', 'title_pt', 'title_en', 'title_es', 'text_pt', 'text_en', 'text_es', 'image_path', 'button_label_pt', 'button_label_en', 'button_label_es', 'button_url', 'sort_order'],
   seo: ['label', 'title_pt', 'title_en', 'title_es', 'description_pt', 'description_en', 'description_es', 'keywords_pt', 'keywords_en', 'keywords_es', 'canonical_path', 'og_image', 'robots', 'geo_region', 'geo_placename', 'geo_position', 'icbm'],
+  customCodes: ['name', 'location', 'code', 'is_active', 'sort_order'],
 };
 
 async function adminSummary(env) {
-  const tables = ['contacts', 'products', 'representatives', 'team_members', 'documents', 'editable_sections', 'seo_pages'];
+  const tables = ['contacts', 'products', 'representatives', 'team_members', 'documents', 'editable_sections', 'seo_pages', 'custom_codes'];
   const counts = Object.fromEntries(await Promise.all(tables.map(async (table) => [table, await count(env, table)])));
   const recentContacts = await env.DB.prepare(
     `SELECT id, name, email, phone, company, subject, status, created_at FROM contacts ORDER BY created_at DESC LIMIT 10`
@@ -805,7 +884,7 @@ function normalizeAdminValue(field, value) {
 }
 
 async function count(env, table) {
-  const allowed = new Set(['contacts', 'products', 'representatives', 'team_members', 'documents', 'editable_sections', 'seo_pages']);
+  const allowed = new Set(['contacts', 'products', 'representatives', 'team_members', 'documents', 'editable_sections', 'seo_pages', 'custom_codes']);
   if (!allowed.has(table)) return 0;
   const row = await env.DB.prepare(`SELECT COUNT(*) AS total FROM ${table}`).first().catch(() => ({ total: 0 }));
   return Number(row?.total || 0);
@@ -824,6 +903,7 @@ function adminJs() {
   const tabs = document.querySelectorAll('[data-admin-tab]');
   const labels = {dashboard:'Visão geral',content:'Textos e botões',seo:'SEO e GEO',products:'Linhagens',representatives:'Representantes',team:'Equipe',contacts:'Contatos'};
   const token = new URLSearchParams(location.search).get('token') || '';
+  labels.customCodes = 'Pixels e scripts';
   const api = async (path, options={}) => {
     const headers = {'content-type':'application/json', ...(options.headers || {})};
     if (token) headers['x-admin-token'] = token;
@@ -839,11 +919,264 @@ function adminJs() {
   document.addEventListener('submit', async (event) => { const el = event.target.closest('.admin-form'); if (!el) return; event.preventDefault(); const payload = Object.fromEntries(new FormData(el).entries()); await api(el.dataset.endpoint,{method:el.dataset.method,body:JSON.stringify(payload)}); show('Alteração salva com sucesso.'); load(currentTab); });
   let currentTab = 'dashboard';
   tabs.forEach(btn => btn.addEventListener('click', () => { tabs.forEach(b=>b.classList.remove('is-active')); btn.classList.add('is-active'); load(btn.dataset.adminTab); }));
-  async function load(tab){ currentTab=tab; title.textContent=labels[tab]; root.innerHTML='<div class="admin-box">Carregando...</div>'; if(tab==='dashboard') return dashboard(); if(tab==='content') return content(); if(tab==='seo') return seo(); if(tab==='products') return table('products','/api/admin/products',[['slug'],['name'],['category'],['egg_color'],['summary_pt','textarea',true],['summary_en','textarea',true],['summary_es','textarea',true],['content_pt','textarea',true],['image'],['status'],['sort_order']]); if(tab==='representatives') return table('representatives','/api/admin/representatives',[['name'],['role'],['uf'],['region'],['city'],['phone'],['email'],['photo'],['is_active'],['sort_order']]); if(tab==='team') return table('team','/api/admin/team',[['name'],['position'],['region'],['phone'],['email'],['photo'],['is_active'],['sort_order']]); if(tab==='contacts') return contacts(); }
+  async function load(tab){ currentTab=tab; title.textContent=labels[tab]; root.innerHTML='<div class="admin-box">Carregando...</div>'; if(tab==='dashboard') return dashboard(); if(tab==='content') return content(); if(tab==='seo') return seo(); if(tab==='customCodes') return customCodes(); if(tab==='products') return table('products','/api/admin/products',[['slug'],['name'],['category'],['egg_color'],['summary_pt','textarea',true],['summary_en','textarea',true],['summary_es','textarea',true],['content_pt','textarea',true],['image'],['status'],['sort_order']]); if(tab==='representatives') return table('representatives','/api/admin/representatives',[['name'],['role'],['uf'],['region'],['city'],['phone'],['email'],['photo'],['is_active'],['sort_order']]); if(tab==='team') return table('team','/api/admin/team',[['name'],['position'],['region'],['phone'],['email'],['photo'],['is_active'],['sort_order']]); if(tab==='contacts') return contacts(); }
   async function dashboard(){ const data=await api('/api/admin/summary'); const c=data.counts; root.innerHTML='<section class="admin-cards">'+Object.entries(c).map(([k,v])=>'<article class="admin-card"><span>'+escapeHtml(k)+'</span><strong>'+v+'</strong></article>').join('')+'</section><section class="admin-box"><h2>Últimos contatos</h2>'+(data.recentContacts||[]).map(r=>'<p><strong>'+escapeHtml(r.name)+'</strong> '+escapeHtml(r.email)+' — '+escapeHtml(r.subject||'')+'</p>').join('')+'</section>'; }
   async function content(){ const rows=await api('/api/admin/content'); root.innerHTML='<div class="admin-grid">'+rows.map(row=>'<article class="admin-row"><div><h3>'+escapeHtml(row.label)+'</h3><p>'+escapeHtml(row.page_key)+' / '+escapeHtml(row.section_key)+'</p></div><button class="admin-button" data-edit-content="'+row.id+'">Editar</button></article>').join('')+'</div>'; root.querySelectorAll('[data-edit-content]').forEach(btn=>btn.onclick=()=>{ const row=rows.find(r=>String(r.id)===btn.dataset.editContent); root.innerHTML=form([['label'],['title_pt'],['title_en'],['title_es'],['text_pt','textarea',true],['text_en','textarea',true],['text_es','textarea',true],['image_path'],['button_label_pt'],['button_label_en'],['button_label_es'],['button_url'],['sort_order']],row,'/api/admin/content/update'); }); }
   async function seo(){ const rows=await api('/api/admin/seo'); root.innerHTML='<div class="admin-grid">'+rows.map(row=>'<article class="admin-row"><div><h3>'+escapeHtml(row.label)+'</h3><p>'+escapeHtml(row.title_pt||'')+'</p></div><button class="admin-button" data-edit-seo="'+row.id+'">Editar</button></article>').join('')+'</div>'; root.querySelectorAll('[data-edit-seo]').forEach(btn=>btn.onclick=()=>{ const row=rows.find(r=>String(r.id)===btn.dataset.editSeo); root.innerHTML=form([['label'],['title_pt'],['title_en'],['title_es'],['description_pt','textarea',true],['description_en','textarea',true],['description_es','textarea',true],['keywords_pt','textarea',true],['keywords_en','textarea',true],['keywords_es','textarea',true],['canonical_path'],['og_image'],['robots'],['geo_region'],['geo_placename'],['geo_position'],['icbm']],row,'/api/admin/seo/update'); }); }
+  async function customCodes(){ const rows=await api('/api/admin/custom-codes'); const help='<section class="admin-box"><h2>Inserção de pixels, analytics e códigos externos</h2><p class="admin-muted">Use <strong>head</strong> para Google Analytics, Meta Pixel e verificação de domínio. Use <strong>body_start</strong> para códigos que pedem instalação logo após abrir o body, como parte do Google Tag Manager. Use <strong>body_end</strong> para scripts que podem carregar no fim da página.</p></section>'; root.innerHTML=help+'<div class="admin-toolbar"><button class="admin-button" id="new-row">Novo código</button><span class="admin-muted">'+rows.length+' códigos cadastrados</span></div><div class="admin-grid">'+rows.map(row=>'<article class="admin-row"><div><h3>'+escapeHtml(row.name)+'</h3><p>'+escapeHtml(row.location)+' | '+(Number(row.is_active)?'Ativo':'Inativo')+'</p></div><button class="admin-button" data-edit="'+row.id+'">Editar</button></article>').join('')+'</div>'; const fields=[['name'],['location'],['code','textarea',true],['is_active'],['sort_order']]; document.getElementById('new-row').onclick=()=>{ root.innerHTML=help+form(fields,{location:'head',is_active:1,sort_order:0},'/api/admin/custom-codes','POST'); }; root.querySelectorAll('[data-edit]').forEach(btn=>btn.onclick=()=>{ const row=rows.find(r=>String(r.id)===btn.dataset.edit); root.innerHTML=help+form(fields,row,'/api/admin/custom-codes','PUT'); }); }
   async function table(name, endpoint, fields){ const rows=await api(endpoint); root.innerHTML='<div class="admin-toolbar"><button class="admin-button" id="new-row">Novo registro</button><span class="admin-muted">'+rows.length+' registros</span></div><div class="admin-grid">'+rows.map(row=>'<article class="admin-row"><div><h3>'+escapeHtml(row.name||row.title||row.slug)+'</h3><p>'+escapeHtml(row.role||row.position||row.category||row.uf||'')+'</p></div><button class="admin-button" data-edit="'+row.id+'">Editar</button></article>').join('')+'</div>'; document.getElementById('new-row').onclick=()=>{ root.innerHTML=form(fields,{},endpoint,'POST'); }; root.querySelectorAll('[data-edit]').forEach(btn=>btn.onclick=()=>{ const row=rows.find(r=>String(r.id)===btn.dataset.edit); root.innerHTML=form(fields,row,endpoint,'PUT'); }); }
   async function contacts(){ const rows=await api('/api/admin/contacts'); root.innerHTML='<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Nome</th><th>E-mail</th><th>Telefone</th><th>Empresa</th><th>Mensagem</th><th>Status</th></tr></thead><tbody>'+rows.map(row=>'<tr><td>'+escapeHtml(row.name)+'</td><td>'+escapeHtml(row.email)+'</td><td>'+escapeHtml(row.phone)+'</td><td>'+escapeHtml(row.company)+'</td><td>'+escapeHtml(row.message)+'</td><td><select data-contact="'+row.id+'"><option '+(row.status==='new'?'selected':'')+' value="new">Novo</option><option '+(row.status==='in_progress'?'selected':'')+' value="in_progress">Em andamento</option><option '+(row.status==='answered'?'selected':'')+' value="answered">Respondido</option></select></td></tr>').join('')+'</tbody></table></div>'; root.querySelectorAll('[data-contact]').forEach(sel=>sel.onchange=async()=>{ await api('/api/admin/contacts/update',{method:'PUT',body:JSON.stringify({id:sel.dataset.contact,status:sel.value})}); show('Status atualizado.'); }); }
   load('dashboard');`;
+}
+
+function langAttr(selectedLang) {
+  if (selectedLang === 'en') return 'en';
+  if (selectedLang === 'es') return 'es';
+  return 'pt-BR';
+}
+
+function localizedHref(href, selectedLang) {
+  if (selectedLang === 'pt' || href.startsWith('http') || href.startsWith('/admin')) return href;
+  const hashIndex = href.indexOf('#');
+  const base = hashIndex >= 0 ? href.slice(0, hashIndex) : href;
+  const hash = hashIndex >= 0 ? href.slice(hashIndex) : '';
+  const sep = base.includes('?') ? '&' : '?';
+  return `${base}${sep}lang=${selectedLang}${hash}`;
+}
+
+function navLabel(key, selectedLang) {
+  const labels = {
+    pt: { home: 'Início', sobre: 'A Lohmann', linhagens: 'Linhagens', representantes: 'Representantes', suporte: 'Suporte técnico', biblioteca: 'Biblioteca', artigos: 'Artigos', contato: 'Contato', radar: 'Radar Técnico' },
+    en: { home: 'Home', sobre: 'About Lohmann', linhagens: 'Strains', representantes: 'Representatives', suporte: 'Technical Support', biblioteca: 'Library', artigos: 'Articles', contato: 'Contact', radar: 'Technical Radar' },
+    es: { home: 'Inicio', sobre: 'La Lohmann', linhagens: 'Líneas', representantes: 'Representantes', suporte: 'Soporte técnico', biblioteca: 'Biblioteca', artigos: 'Artículos', contato: 'Contacto', radar: 'Radar Técnico' },
+  };
+  return labels[selectedLang]?.[key] || labels.pt[key] || key;
+}
+
+function translateStatic(htmlText, selectedLang) {
+  if (selectedLang === 'pt') return htmlText;
+  let output = htmlText;
+  const dictionary = STATIC_TRANSLATIONS[selectedLang] || {};
+  for (const [pt, translated] of Object.entries(dictionary)) {
+    output = output.split(pt).join(translated);
+  }
+  return output;
+}
+
+const STATIC_TRANSLATIONS = {
+  en: {
+    'GenÃ©tica como engenharia de sistema.': 'Genetics as system engineering.',
+    'AdministraÃ§Ã£o': 'Administration',
+    'Administração': 'Administration',
+    'Voltar': 'Back',
+    'Linhagem |': 'Strain |',
+    'Solicitar diagnÃ³stico tÃ©cnico': 'Request a technical diagnosis',
+    'Solicitar diagnóstico técnico': 'Request a technical diagnosis',
+    'Dados produtivos': 'Production data',
+    'InformaÃ§Ãµes da linhagem': 'Strain information',
+    'Informações da linhagem': 'Strain information',
+    'Para cada manejo, a ave certa.': 'The right bird for every management system.',
+    'Linhagem |': 'Strain |',
+    'Indicadores técnicos da': 'Technical indicators for',
+    'Informações de referência para análise de potencial produtivo, qualidade de ovos, consumo, peso corporal e viabilidade.': 'Reference information for analyzing production potential, egg quality, feed intake, body weight and viability.',
+    'A LOHMANN BROWN-LITE atende operações orientadas ao mercado de ovos marrons, com foco em persistência, qualidade de casca e ajuste ao sistema produtivo.': 'LOHMANN BROWN-LITE serves operations focused on the brown egg market, with emphasis on persistence, shell quality and production-system fit.',
+    'A LOHMANN LSL-LITE atende operações orientadas ao mercado de ovos brancos, com foco em uniformidade, eficiência alimentar e manejo previsível.': 'LOHMANN LSL-LITE serves operations focused on the white egg market, with emphasis on uniformity, feed efficiency and predictable management.',
+    'Indicadores técnicos devem ser interpretados junto ao manejo, clima, ambiência, mercado de destino e acompanhamento de campo.': 'Technical indicators should be interpreted together with management, climate, housing conditions, target market and field support.',
+    'Escolha genética orientada por sistema produtivo.': 'Genetic choice guided by production system.',
+    'Leitura de consumo, viabilidade, persistência e qualidade de ovos.': 'Reading feed intake, viability, persistence and egg quality.',
+    'Suporte técnico para calibragem em campo.': 'Technical support for field calibration.',
+    'Suporte tÃ©cnico': 'Technical support',
+    'Suporte técnico': 'Technical support',
+    'Ovos brancos': 'White eggs',
+    'Ovos marrons': 'Brown eggs',
+    'Ver detalhes': 'View details',
+    'Enviar': 'Send',
+    'Nome': 'Name',
+    'Empresa': 'Company',
+    'Telefone': 'Phone',
+    'Assunto': 'Subject',
+    'Mensagem': 'Message',
+  },
+  es: {
+    'GenÃ©tica como engenharia de sistema.': 'Genética como ingeniería de sistema.',
+    'AdministraÃ§Ã£o': 'Administración',
+    'Administração': 'Administración',
+    'Voltar': 'Volver',
+    'Linhagem |': 'Línea |',
+    'Solicitar diagnÃ³stico tÃ©cnico': 'Solicitar diagnóstico técnico',
+    'Solicitar diagnóstico técnico': 'Solicitar diagnóstico técnico',
+    'Dados produtivos': 'Datos productivos',
+    'InformaÃ§Ãµes da linhagem': 'Información de la línea',
+    'Informações da linhagem': 'Información de la línea',
+    'Para cada manejo, a ave certa.': 'Para cada manejo, el ave adecuada.',
+    'Linhagem |': 'Línea |',
+    'Indicadores técnicos da': 'Indicadores técnicos de',
+    'Informações de referência para análise de potencial produtivo, qualidade de ovos, consumo, peso corporal e viabilidade.': 'Información de referencia para analizar potencial productivo, calidad de huevos, consumo, peso corporal y viabilidad.',
+    'A LOHMANN BROWN-LITE atende operações orientadas ao mercado de ovos marrons, com foco em persistência, qualidade de casca e ajuste ao sistema produtivo.': 'LOHMANN BROWN-LITE atiende operaciones orientadas al mercado de huevos marrones, con foco en persistencia, calidad de cáscara y ajuste al sistema productivo.',
+    'A LOHMANN LSL-LITE atende operações orientadas ao mercado de ovos brancos, com foco em uniformidade, eficiência alimentar e manejo previsível.': 'LOHMANN LSL-LITE atiende operaciones orientadas al mercado de huevos blancos, con foco en uniformidad, eficiencia alimentaria y manejo previsible.',
+    'Indicadores técnicos devem ser interpretados junto ao manejo, clima, ambiência, mercado de destino e acompanhamento de campo.': 'Los indicadores técnicos deben interpretarse junto al manejo, clima, ambiente, mercado de destino y acompañamiento de campo.',
+    'Escolha genética orientada por sistema produtivo.': 'Elección genética orientada por sistema productivo.',
+    'Leitura de consumo, viabilidade, persistência e qualidade de ovos.': 'Lectura de consumo, viabilidad, persistencia y calidad de huevos.',
+    'Suporte técnico para calibragem em campo.': 'Soporte técnico para calibración en campo.',
+    'Suporte tÃ©cnico': 'Soporte técnico',
+    'Suporte técnico': 'Soporte técnico',
+    'Ovos brancos': 'Huevos blancos',
+    'Ovos marrons': 'Huevos marrones',
+    'Ver detalhes': 'Ver detalles',
+    'Enviar': 'Enviar',
+    'Nome': 'Nombre',
+    'Empresa': 'Empresa',
+    'Telefone': 'Teléfono',
+    'Assunto': 'Asunto',
+    'Mensagem': 'Mensaje',
+  },
+};
+
+function translatedCopy(selectedLang) {
+  const en = {
+    heroTitle: 'The right bird for your production system.',
+    heroText: 'Lohmann do Brasil combines poultry genetics, technical support and market reading to support production systems with predictability, egg quality and operational efficiency.',
+    heroButton: 'View strains',
+    talk: 'Talk to the team',
+    aboutTitle: 'Poultry genetics guided by performance, management and market needs.',
+    aboutText: 'Lohmann do Brasil provides strains for different production realities, with close technical support focused on stability, persistence, egg quality and market fit.',
+    aboutMore: 'Learn about Lohmann',
+    strainsKicker: 'Lohmann Portfolio',
+    strainsTitle: 'Strains calibrated by management, climate and market.',
+    repsTitle: 'Regional technical network to calibrate decisions and management.',
+    repsText: 'Find the contact responsible for your state and direct commercial, technical and distribution questions.',
+    repsButton: 'View representatives',
+    supportTitle: 'Technical support to turn genetic potential into predictable results.',
+    supportText: 'Materials, training and regional service support management routines, indicator reading and decision-making throughout the production cycle.',
+    ovoflockTitle: 'Production data and technical routines in one environment.',
+    ovoflockText: 'A platform to support flock monitoring, indicators and operational decisions with better organization.',
+    articlesTitle: 'Technical and institutional articles.',
+    partnersTitle: 'Relationships that strengthen Lohmann presence in the field.',
+    radarTitle: 'Market indicators on a dedicated page.',
+    contactTitle: 'Talk to Lohmann do Brasil.',
+    contactText: 'Send your request so we can direct the service.',
+    aboutPageTitle: 'Poultry genetics with technical presence in the field.',
+    aboutPageText: 'Lohmann do Brasil works with producers, farms and distributors through commercial layer strains, technical materials and field support.',
+    teamTitle: 'Reference people for technical, commercial and institutional service.',
+    strainsPageTitle: 'Lohmann strains for different production systems.',
+    repsPageTitle: 'Find the Lohmann representative for your region.',
+    repsPageText: 'Use the interactive map to locate service by state. Click the desired state abbreviation to keep the representative list visible.',
+    supportPageTitle: 'Technical support is calibration of the genetic system in the field.',
+    libraryPageTitle: 'Spreadsheets and technical support materials.',
+    articlesPageTitle: 'Technical content for parameter-based decisions.',
+    radarPageTitle: 'Market indicators for technical decisions.',
+  };
+  const es = {
+    heroTitle: 'El ave adecuada para su sistema productivo.',
+    heroText: 'Lohmann do Brasil combina genética avícola, soporte técnico y lectura de mercado para apoyar sistemas productivos con previsibilidad, calidad de huevos y eficiencia operativa.',
+    heroButton: 'Ver líneas',
+    talk: 'Hablar con el equipo',
+    aboutTitle: 'Genética avícola orientada por desempeño, manejo y mercado.',
+    aboutText: 'Lohmann do Brasil ofrece líneas para diferentes realidades productivas, con soporte técnico cercano enfocado en estabilidad, persistencia, calidad de huevos y adecuación al mercado.',
+    aboutMore: 'Conocer Lohmann',
+    strainsKicker: 'Portafolio Lohmann',
+    strainsTitle: 'Líneas calibradas por manejo, clima y mercado.',
+    repsTitle: 'Red técnica regional para calibrar decisiones y manejo.',
+    repsText: 'Encuentre el contacto responsable por su estado y dirija dudas comerciales, técnicas y de distribución.',
+    repsButton: 'Ver representantes',
+    supportTitle: 'Soporte técnico para transformar potencial genético en resultados previsibles.',
+    supportText: 'Materiales, entrenamientos y atención regional apoyan la rutina de manejo, la lectura de indicadores y la toma de decisiones durante el ciclo productivo.',
+    ovoflockTitle: 'Datos de producción y rutina técnica en un solo ambiente.',
+    ovoflockText: 'Una plataforma para apoyar el seguimiento de lotes, indicadores y decisiones operativas con mayor organización.',
+    articlesTitle: 'Artículos técnicos e institucionales.',
+    partnersTitle: 'Relaciones que fortalecen la presencia de Lohmann en el campo.',
+    radarTitle: 'Indicadores de mercado en una página dedicada.',
+    contactTitle: 'Hable con Lohmann do Brasil.',
+    contactText: 'Envíe su solicitud para direccionar la atención.',
+    aboutPageTitle: 'Genética avícola con presencia técnica en el campo.',
+    aboutPageText: 'Lohmann do Brasil actúa junto a productores, granjas y distribuidores con líneas comerciales de postura, materiales técnicos y acompañamiento de campo.',
+    teamTitle: 'Personas de referencia para atención técnica, comercial e institucional.',
+    strainsPageTitle: 'Líneas Lohmann para diferentes sistemas productivos.',
+    repsPageTitle: 'Encuentre el representante Lohmann para su región.',
+    repsPageText: 'Use el mapa interactivo para localizar la atención por estado. Haga clic en la sigla del estado para fijar la lista de representantes.',
+    supportPageTitle: 'El soporte técnico calibra el sistema genético en el campo.',
+    libraryPageTitle: 'Planillas y materiales de apoyo técnico.',
+    articlesPageTitle: 'Contenido técnico para decisiones basadas en parámetros.',
+    radarPageTitle: 'Indicadores de mercado para decisiones técnicas.',
+  };
+  return selectedLang === 'es' ? es : en;
+}
+
+function translatedPage(pageKey, productRows, repRows, teamRows, selectedLang) {
+  const t = translatedCopy(selectedLang);
+  if (pageKey === 'home') return translatedHome(productRows, selectedLang, t);
+  if (pageKey === 'sobre') return translatedSobre(teamRows, selectedLang, t);
+  if (pageKey === 'linhagens') return translatedLinhagens(productRows, selectedLang, t);
+  if (pageKey === 'representantes') return translatedReps(repRows, selectedLang, t);
+  if (pageKey === 'suporte') return translatedSupport(selectedLang, t);
+  if (pageKey === 'biblioteca') return translatedLibrary(selectedLang, t);
+  if (pageKey === 'artigos') return translatedArticles(selectedLang, t);
+  if (pageKey === 'radar') return translatedRadar(selectedLang, t);
+  return translatedHome(productRows, selectedLang, t);
+}
+
+function translatedProductGrid(productRows, selectedLang, t) {
+  const rows = productRows.length ? productRows : fallbackProducts(selectedLang);
+  return `<section class="products section" id="linhagens"><header class="section-heading"><div><p class="eyebrow">${h(t.strainsKicker)}</p><h2>${h(t.strainsTitle)}</h2></div></header><div class="product-grid">${rows.map((product, index) => `<article class="product-card reveal"><div class="product-art product-art-${index + 1}"><span>0${index + 1}</span><img class="product-hen official-hen" src="/assets/${product.slug.includes('brown') ? 'galinha-marron-oficial-lohmann.png' : 'galinha-branca-oficial-lohmann.png'}" alt="${h(product.name)}"></div><div class="product-copy"><small>${h(product.egg_color)}</small><h3>${h(product.name)}</h3><p>${h(product.summary)}</p><a href="${localizedHref(`/linhagens/${h(product.slug)}`, selectedLang)}">${selectedLang === 'es' ? 'Ver detalles' : 'View details'} <b>+</b></a></div></article>`).join('')}</div></section>`;
+}
+
+function translatedHome(productRows, selectedLang, t) {
+  return `<section class="hero" id="inicio"><div class="hero-copy reveal"><div class="live-label"><i></i>${selectedLang === 'es' ? 'Genética como ingeniería de sistema' : 'Genetics as system engineering'}</div><h1>${h(t.heroTitle)}</h1><p>${h(t.heroText)}</p><div class="actions"><a class="button primary" href="${localizedHref('/linhagens', selectedLang)}">${h(t.heroButton)}</a><a class="button ghost" href="#contato">${h(t.talk)}</a></div><div class="signal-row"><span><b>01</b> System</span><span><b>02</b> Management</span><span><b>03</b> Calibration</span></div></div><div class="hero-visual" aria-hidden="true"><div class="egg-photo-layer"></div><div class="tech-grid"></div><div class="scan-line"></div><div class="lohmann-l-motion"><span class="l-mark l-mark-large"></span><span class="l-mark l-mark-medium"></span><span class="l-mark l-mark-small"></span></div></div></section>
+  <section class="intro section"><div><p class="eyebrow">Lohmann do Brasil</p><h2>${h(t.aboutTitle)}</h2></div><div><p>${h(t.aboutText)}</p><a class="text-link" href="${localizedHref('/a-lohmann', selectedLang)}">${h(t.aboutMore)} <span>+</span></a></div></section>
+  ${translatedProductGrid(productRows, selectedLang, t)}
+  <section class="technical" id="tecnico"><div class="technical-copy reveal"><p class="eyebrow light">${navLabel('suporte', selectedLang)}</p><h2>${h(t.supportTitle)}</h2><p>${h(t.supportText)}</p><a class="button light" href="${localizedHref('/suporte-tecnico', selectedLang)}">${selectedLang === 'es' ? 'Saber más' : 'Learn more'}</a></div><div class="technical-list"><article><span>01</span><h3>${selectedLang === 'es' ? 'Documentos técnicos' : 'Technical documents'}</h3><p>${selectedLang === 'es' ? 'Guías y materiales para estandarizar la lectura técnica.' : 'Guides and materials to standardize technical reading.'}</p></article><article><span>02</span><h3>${selectedLang === 'es' ? 'Entrenamientos' : 'Training'}</h3><p>${selectedLang === 'es' ? 'Contenido organizado por sistema, etapa productiva y objetivo.' : 'Content organized by system, production stage and goal.'}</p></article><article><span>03</span><h3>${selectedLang === 'es' ? 'Gestión de manejo' : 'Management control'}</h3><p>${selectedLang === 'es' ? 'Tools para acompañar lotes e interpretar desvíos.' : 'Tools to monitor flocks and interpret deviations.'}</p></article></div></section>
+  <section class="representatives-shortcut section"><div class="shortcut-copy reveal"><p class="eyebrow">${navLabel('representantes', selectedLang)}</p><h2>${h(t.repsTitle)}</h2><p>${h(t.repsText)}</p><a class="button primary" href="${localizedHref('/representantes', selectedLang)}">${h(t.repsButton)}</a></div><div class="shortcut-image reveal" aria-hidden="true"><img src="/assets/representantes-atalho.png" alt=""></div></section>
+  <section class="innovation"><div class="innovation-visual" aria-hidden="true"><div class="analysis-egg"><span></span><i></i></div><div class="radar"></div></div><div class="innovation-copy reveal"><p class="eyebrow">Ovoflock</p><h2>${h(t.ovoflockTitle)}</h2><p>${h(t.ovoflockText)}</p><a class="button primary" href="https://ovoflock.com/login" target="_blank" rel="noopener">Ovoflock</a></div></section>
+  <section class="partners-section section"><header class="section-heading"><div><p class="eyebrow">${selectedLang === 'es' ? 'Socios' : 'Partners'}</p><h2>${h(t.partnersTitle)}</h2></div></header><div class="partners-grid"><article class="partner-card reveal"><img src="/assets/logo-parceiro-tangara.png?v=${ASSET_VERSION}" alt="Tangará"></article><article class="partner-card reveal"><img src="/assets/logo-parceiro-ovos-sousa.png?v=${ASSET_VERSION}" alt="Ovos Sousa"></article></div></section>
+  <section class="technical-radar radar-shortcut section"><header class="section-heading"><div><p class="eyebrow"><span class="live-dot"></span>${navLabel('radar', selectedLang)}</p><h2>${h(t.radarTitle)}</h2></div></header><a class="button primary" href="${localizedHref('/radar-tecnico', selectedLang)}">${selectedLang === 'es' ? 'Abrir Radar Técnico' : 'Open Technical Radar'}</a></section>
+  ${translatedContact(selectedLang, t)}`;
+}
+
+function translatedSobre(teamRows, selectedLang, t) {
+  const rows = teamRows.length ? teamRows : fallbackTeamMembers();
+  return `<section class="internal-hero"><p class="eyebrow">${navLabel('sobre', selectedLang)}</p><h1>${h(t.aboutPageTitle)}</h1><p>${h(t.aboutPageText)}</p></section><section class="content-bands content-bands-rich"><div class="content-prose"><p class="eyebrow">${selectedLang === 'es' ? 'Actuación técnica' : 'Technical presence'}</p><h2>${h(t.aboutTitle)}</h2><p>${h(t.aboutText)}</p></div><div class="team-section"><header class="section-heading"><div><p class="eyebrow">Equipe</p><h2>${h(t.teamTitle)}</h2></div></header><div class="team-grid">${rows.map((member) => `<article class="team-card"><div class="team-photo">${member.photo ? `<img src="${h(member.photo)}" alt="${h(member.name)}">` : `<span>${h(member.initials || initials(member.name))}</span>`}</div><div><h3>${h(member.name)}</h3><p>${h(member.position)}</p><small>${h(member.region || 'Lohmann do Brasil')}</small>${member.whatsapp ? `<a class="team-whatsapp-link" href="${h(member.whatsapp)}" target="_blank" rel="noopener">${h(member.phone || '')}</a>` : ''}</div></article>`).join('')}</div></div></section>`;
+}
+
+function translatedLinhagens(productRows, selectedLang, t) {
+  return `<section class="internal-hero"><p class="eyebrow">${navLabel('linhagens', selectedLang)}</p><h1>${h(t.strainsPageTitle)}</h1><p>${selectedLang === 'es' ? 'Cada línea debe ser evaluada según manejo, clima, mercado y objetivo productivo.' : 'Each strain should be evaluated by management, climate, market and production goal.'}</p></section>${translatedProductGrid(productRows, selectedLang, t)}`;
+}
+
+function translatedReps(repRows, selectedLang, t) {
+  return translateStatic(reps(repRows), selectedLang).replace('Encontre o representante Lohmann para sua regiÃ£o.', h(t.repsPageTitle)).replace('Use o mapa interativo para localizar o atendimento por estado. Clique sobre a sigla do estado desejado para fixar a lista de representantes e consulte telefone, regiÃ£o de atuaÃ§Ã£o e informaÃ§Ãµes de contato. Para escolher outro estado, use o botÃ£o voltar ao mapa.', h(t.repsPageText));
+}
+
+function translatedSupport(selectedLang, t) {
+  return `<section class="internal-hero"><p class="eyebrow">${navLabel('suporte', selectedLang)}</p><h1>${h(t.supportPageTitle)}</h1><p>${h(t.supportText)}</p></section><section class="content-bands content-bands-rich"><div class="content-grid content-grid-six"><article class="content-card"><span>01</span><h2>${selectedLang === 'es' ? 'Documentos técnicos' : 'Technical documents'}</h2><p>${selectedLang === 'es' ? 'Guides y materiales para manejo, indicadores, ambiente, recría, postura y calidad de huevos.' : 'Guides and materials for management, indicators, environment, rearing, laying and egg quality.'}</p></article><article class="content-card"><span>02</span><h2>${selectedLang === 'es' ? 'Entrenamientos' : 'Training'}</h2><p>${selectedLang === 'es' ? 'Contenido para estandarizar decisiones por parámetros.' : 'Content to standardize decisions by parameters.'}</p></article><article class="content-card"><span>03</span><h2>${selectedLang === 'es' ? 'Gestión de lote' : 'Flock management'}</h2><p>${selectedLang === 'es' ? 'Tools para seguir desempeño e identificar desvíos.' : 'Tools to monitor performance and identify deviations.'}</p></article></div></section>`;
+}
+
+function translatedLibrary(selectedLang, t) {
+  return `<section class="internal-hero"><p class="eyebrow">${navLabel('biblioteca', selectedLang)}</p><h1>${h(t.libraryPageTitle)}</h1><p>${selectedLang === 'es' ? 'La biblioteca organiza archivos de consulta para seguimiento de lotes, indicadores y rutina de manejo.' : 'The library organizes reference files for flock monitoring, indicator reading and management routines.'}</p></section><section class="content-bands content-bands-rich library-page"><div class="content-grid"><article class="content-card"><span>01</span><h2>${selectedLang === 'es' ? 'Planillas de seguimiento de lote' : 'Flock monitoring spreadsheets'}</h2><p>${selectedLang === 'es' ? 'Modelos para organizar producción, consumo, mortalidad, peso de huevos y rutina técnica.' : 'Templates to organize production, feed intake, mortality, egg weight and technical routine.'}</p></article><article class="content-card"><span>02</span><h2>${selectedLang === 'es' ? 'Control de producción e indicadores' : 'Production and indicator control'}</h2><p>${selectedLang === 'es' ? 'Materiales de apoyo para registrar datos operativos.' : 'Support materials to record operational data.'}</p></article></div></section>`;
+}
+
+function translatedArticles(selectedLang, t) {
+  return `<section class="internal-hero"><p class="eyebrow">${navLabel('artigos', selectedLang)}</p><h1>${h(t.articlesPageTitle)}</h1><p>${selectedLang === 'es' ? 'Artículos, comunicados y materiales sobre genética, manejo, soporte técnico y mercado.' : 'Articles, notices and materials about genetics, management, technical support and market.'}</p></section><section class="content-bands content-bands-rich"><div class="content-grid"><article class="content-card"><span>01</span><h2>${selectedLang === 'es' ? 'La ave adecuada para cada manejo' : 'The right bird for every management system'}</h2><p>${selectedLang === 'es' ? 'Contenido sobre elección de línea según sistema, clima, mercado y objetivo.' : 'Content about strain choice by system, climate, market and goal.'}</p></article><article class="content-card"><span>02</span><h2>${selectedLang === 'es' ? 'Bienestar como variable de eficiencia' : 'Welfare as an efficiency variable'}</h2><p>${selectedLang === 'es' ? 'Materiales sobre viabilidad, estrés, plumas, mortalidad y resultado productivo.' : 'Materials about viability, stress, feather cover, mortality and production result.'}</p></article></div></section>`;
+}
+
+function translatedRadar(selectedLang, t) {
+  return `<section class="internal-hero radar-page-hero"><p class="eyebrow"><span class="live-dot"></span>${navLabel('radar', selectedLang)}</p><h1>${h(t.radarPageTitle)}</h1><p>${selectedLang === 'es' ? 'Acompañe referencias de precio para huevos en plazas brasileñas y use los datos como apoyo técnico y comercial.' : 'Follow egg price references in Brazilian markets and use the data as technical and commercial support.'}</p></section><section class="technical-radar section radar-page"><div class="radar-dashboard"><aside class="radar-insights"><p class="eyebrow">${selectedLang === 'es' ? 'Lectura técnica' : 'Technical reading'}</p><h2>${selectedLang === 'es' ? 'El precio es contexto. La decisión depende del sistema.' : 'Price is context. Decision depends on the system.'}</h2><p>${selectedLang === 'es' ? 'El Radar Técnico fue pensado como punto de consulta para productores, granjas y distribuidores.' : 'Technical Radar was designed as a reference point for producers, farms and distributors.'}</p></aside><div class="cepea-widget-card"><script type="text/javascript" src="https://cepea.org.br/br/widgetproduto.js.php?fonte=arial&tamanho=10&largura=100%25&corfundo=242424&cortexto=ffffff&corlinha=f78e05&id_indicador%5B%5D=159-Bastos+(SP)+-+FOB-branco&id_indicador%5B%5D=159-Grande+BH+-+(MG)+-+CIF-branco&id_indicador%5B%5D=159-Grande+SP+(SP)+-+CIF-branco&id_indicador%5B%5D=159-Recife+(PE)+-+CIF-branco&id_indicador%5B%5D=159-S.+M.+de+Jetib%C3%A1+(ES)+-+FOB-branco&id_indicador%5B%5D=159-Bastos+(SP)+-+FOB-vermelho&id_indicador%5B%5D=159-Grande+BH+-+(MG)+-+CIF-vermelho&id_indicador%5B%5D=159-Grande+SP+(SP)+-+CIF-vermelho&id_indicador%5B%5D=159-Recife+(PE)+-+CIF-vermelho&id_indicador%5B%5D=159-S.+M.+de+Jetib%C3%A1+(ES)+-+FOB-vermelho&id_indicador%5B%5D=12&id_indicador%5B%5D=92"></script></div></div></section>`;
+}
+
+function translatedContact(selectedLang, t) {
+  return `<section class="contact" id="contato"><div class="contact-copy"><p class="eyebrow light">${navLabel('contato', selectedLang)}</p><h2>${h(t.contactTitle)}</h2><p>${h(t.contactText)}</p><address>Rua Theofilo Mancor, 670<br>Nova Granada, SP<br>CEP 15440-000</address></div><form action="/api/contact" method="post" class="contact-form"><input type="hidden" name="locale" value="${h(selectedLang)}"><label>${selectedLang === 'es' ? 'Nombre' : 'Name'}<input name="name" required></label><label>${selectedLang === 'es' ? 'Empresa' : 'Company'}<input name="company"></label><label>E-mail<input type="email" name="email" required></label><label>${selectedLang === 'es' ? 'Teléfono' : 'Phone'}<input name="phone"></label><label class="wide">${selectedLang === 'es' ? 'Asunto' : 'Subject'}<input name="subject"></label><label class="wide">${selectedLang === 'es' ? 'Mensaje' : 'Message'}<textarea name="message" rows="4" required></textarea></label><button class="button light" type="submit">${selectedLang === 'es' ? 'Enviar' : 'Send'}</button></form></section>`;
+}
+
+function localizedHeader(active, selectedLang = 'pt') {
+  if (selectedLang === 'pt') return headerCloud(active);
+  const nav = [
+    ['/', navLabel('home', selectedLang), 'home'],
+    ['/a-lohmann', navLabel('sobre', selectedLang), 'sobre'],
+    ['/linhagens', navLabel('linhagens', selectedLang), 'linhagens'],
+    ['/representantes', navLabel('representantes', selectedLang), 'representantes'],
+    ['/suporte-tecnico', navLabel('suporte', selectedLang), 'suporte'],
+    ['/biblioteca', navLabel('biblioteca', selectedLang), 'biblioteca'],
+    ['/artigos', navLabel('artigos', selectedLang), 'artigos'],
+    ['/#contato', navLabel('contato', selectedLang), 'contato'],
+    ['/radar-tecnico', `<span></span>${navLabel('radar', selectedLang)}`, 'radar'],
+  ].map(([href, label, key]) => `<a class="${key === active ? 'active' : ''} ${key === 'radar' ? 'radar-nav-link' : ''}" href="${localizedHref(href, selectedLang)}">${label}</a>`).join('');
+  return `<header class="site-header"><a class="brand" href="${localizedHref('/', selectedLang)}" aria-label="Lohmann do Brasil"><img class="logo-top" src="/assets/logo-lohmann-header-white.png" alt="Lohmann do Brasil"><img class="logo-scrolled" src="/assets/logo-lohmann.png" alt="Lohmann do Brasil"></a><button class="menu-toggle" type="button" aria-label="Menu" aria-expanded="false"><span></span><span></span></button><nav class="nav" aria-label="Principal">${nav}</nav><div class="header-actions"><a class="portal-link" href="https://ovoflock.com/login" target="_blank" rel="noopener">Ovoflock</a></div></header>`;
 }
