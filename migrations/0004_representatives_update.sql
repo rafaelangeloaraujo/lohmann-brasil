@@ -1,0 +1,35 @@
+DELETE FROM representatives;
+
+INSERT INTO representatives
+(name, role, uf, region, city, phone, email, photo, is_active, sort_order)
+VALUES
+('Jalmir Moy', 'Representante comercial', 'RS', 'Rio Grande do Sul', 'RS', '54 99974-8703', '', '/assets/representantes/jalmir-moy.png', 1, 10),
+('Silvio Schlickmann', 'Representante comercial', 'SC', 'Santa Catarina', 'SC', '48 99947-1314', '', '/assets/representantes/silvio-schlickmann.png', 1, 20),
+('Alessandro Martini', 'Representante comercial', 'PR', 'Paraná, São Paulo e Goiás', 'PR / SP / GO', '43 99122-3263', '', '/assets/representantes/alessandro-martini.png', 1, 30),
+('Alessandro Martini', 'Representante comercial', 'SP', 'Paraná, São Paulo e Goiás', 'PR / SP / GO', '43 99122-3263', '', '/assets/representantes/alessandro-martini.png', 1, 31),
+('Alessandro Martini', 'Representante comercial', 'GO', 'Paraná, São Paulo e Goiás', 'PR / SP / GO', '43 99122-3263', '', '/assets/representantes/alessandro-martini.png', 1, 32),
+('Carlos Gastali', 'Representante comercial', 'MS', 'Mato Grosso do Sul e São Paulo (Bastos)', 'MS / Bastos, SP', '14 99857-6450', '', '', 1, 40),
+('Carlos Gastali', 'Representante comercial', 'SP', 'Mato Grosso do Sul e São Paulo (Bastos)', 'MS / Bastos, SP', '14 99857-6450', '', '', 1, 41),
+('Jair Luis', 'Representante comercial', 'SP', 'Atendimento comercial regional', 'SP', '14 99786-7924', '', '/assets/representantes/jair-luis.png', 1, 50),
+('Matheus Fraga', 'Representante comercial', 'MG', 'Minas Gerais', 'MG', '17 99772-0946', '', '', 1, 60),
+('Roberson Bergamini', 'Representante comercial', 'MT', 'Mato Grosso, Rondônia e Acre', 'MT / RO / AC', '66 99995-9998', '', '/assets/representantes/roberson-bergamini.png', 1, 70),
+('Roberson Bergamini', 'Representante comercial', 'RO', 'Mato Grosso, Rondônia e Acre', 'MT / RO / AC', '66 99995-9998', '', '/assets/representantes/roberson-bergamini.png', 1, 71),
+('Roberson Bergamini', 'Representante comercial', 'AC', 'Mato Grosso, Rondônia e Acre', 'MT / RO / AC', '66 99995-9998', '', '/assets/representantes/roberson-bergamini.png', 1, 72),
+('Carlos Alberto', 'Representante comercial', 'RJ', 'Rio de Janeiro', 'RJ', '24 99264-2087', '', '', 1, 80),
+('Gilberto Shwamback', 'Representante comercial', 'ES', 'Espírito Santo', 'ES', '27 99983-7167', '', '/assets/representantes/gilberto-shwamback.png', 1, 90),
+('Cintia Fernandes', 'Representante comercial', 'TO', 'Tocantins', 'TO', '62 98133-6390', '', '/assets/representantes/cintia-fernandes.png', 1, 100),
+('Thiago Dias', 'Representante comercial', 'BA', 'Bahia e Sergipe', 'BA / SE', '79 99987-8819', '', '/assets/representantes/thiago-dias.png', 1, 110),
+('Thiago Dias', 'Representante comercial', 'SE', 'Bahia e Sergipe', 'BA / SE', '79 99987-8819', '', '/assets/representantes/thiago-dias.png', 1, 111),
+('Eduardo Galvão', 'Representante comercial', 'AL', 'Alagoas e Pernambuco (São Bento do Una)', 'AL / PE', '82 9 9641-4435', '', '/assets/representantes/eduardo-galvao.png', 1, 120),
+('Eduardo Galvão', 'Representante comercial', 'PE', 'Alagoas e Pernambuco (São Bento do Una)', 'AL / PE', '82 9 9641-4435', '', '/assets/representantes/eduardo-galvao.png', 1, 121),
+('Charles Lima', 'Gerente Comercial Norte e Nordeste', 'PE', 'Pernambuco, Paraíba e Rio Grande do Norte', 'PE / PB / RN', '17 99757-0688', '', '', 1, 130),
+('Charles Lima', 'Gerente Comercial Norte e Nordeste', 'PB', 'Pernambuco, Paraíba e Rio Grande do Norte', 'PE / PB / RN', '17 99757-0688', '', '', 1, 131),
+('Charles Lima', 'Gerente Comercial Norte e Nordeste', 'RN', 'Pernambuco, Paraíba e Rio Grande do Norte', 'PE / PB / RN', '17 99757-0688', '', '', 1, 132),
+('Valdir Castiglioni', 'Representante comercial', 'CE', 'Ceará, Piauí, Maranhão e Pará', 'CE / PI / MA / PA', '85 98115-9972', '', '', 1, 140),
+('Valdir Castiglioni', 'Representante comercial', 'PI', 'Ceará, Piauí, Maranhão e Pará', 'CE / PI / MA / PA', '85 98115-9972', '', '', 1, 141),
+('Valdir Castiglioni', 'Representante comercial', 'MA', 'Ceará, Piauí, Maranhão e Pará', 'CE / PI / MA / PA', '85 98115-9972', '', '', 1, 142),
+('Valdir Castiglioni', 'Representante comercial', 'PA', 'Ceará, Piauí, Maranhão e Pará', 'CE / PI / MA / PA', '85 98115-9972', '', '', 1, 143),
+('Departamento Comercial', 'Atendimento comercial', 'AM', 'Demais estados', 'AM / AP / RR / DF', '17 99757-2703', '', '', 1, 200),
+('Departamento Comercial', 'Atendimento comercial', 'AP', 'Demais estados', 'AM / AP / RR / DF', '17 99757-2703', '', '', 1, 201),
+('Departamento Comercial', 'Atendimento comercial', 'RR', 'Demais estados', 'AM / AP / RR / DF', '17 99757-2703', '', '', 1, 202),
+('Departamento Comercial', 'Atendimento comercial', 'DF', 'Demais estados', 'AM / AP / RR / DF', '17 99757-2703', '', '', 1, 203);
