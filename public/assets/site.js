@@ -70,7 +70,6 @@ const buildRepresentativeCard = (rep) => {
         <p>${rep.role}</p>
         <dl>
           <dt>Região</dt><dd>${rep.region}</dd>
-          <dt>Cidade</dt><dd>${rep.city}</dd>
           <dt>WhatsApp</dt><dd>${phoneLink}</dd>
           <dt>E-mail</dt><dd>${emailLink}</dd>
         </dl>
