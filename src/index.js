@@ -199,35 +199,39 @@ async function representatives(env) {
 
 function fallbackRepresentativeMap() {
   const rows = [
-    ['Jalmir', 'Representante comercial', 'RS', 'Rio Grande do Sul', 'RS', '54 99974-8703', 10],
-    ['Silvio', 'Representante comercial', 'SC', 'Santa Catarina', 'SC', '48 99947-1314', 20],
-    ['Alessandro', 'Representante comercial', 'PR', 'Paraná, São Paulo e Goiás', 'PR / SP / GO', '43 99122-3263', 30],
-    ['Alessandro', 'Representante comercial', 'SP', 'Paraná, São Paulo e Goiás', 'PR / SP / GO', '43 99122-3263', 31],
-    ['Alessandro', 'Representante comercial', 'GO', 'Paraná, São Paulo e Goiás', 'PR / SP / GO', '43 99122-3263', 32],
-    ['Carlinhos', 'Representante comercial', 'MS', 'Mato Grosso do Sul e São Paulo (Bastos)', 'MS / Bastos, SP', '14 99857-6450', 40],
-    ['Carlinhos', 'Representante comercial', 'SP', 'Mato Grosso do Sul e São Paulo (Bastos)', 'MS / Bastos, SP', '14 99857-6450', 41],
-    ['Jair', 'Representante comercial', 'SP', 'Atendimento comercial regional', 'SP', '14 99786-7924', 50],
-    ['Matheus Fraga', 'Representante comercial', 'MG', 'Minas Gerais', 'MG', '17 99772-0946', 60],
-    ['Roberson', 'Representante comercial', 'MT', 'Mato Grosso, Rondônia e Acre', 'MT / RO / AC', '66 99995-9998', 70],
-    ['Roberson', 'Representante comercial', 'RO', 'Mato Grosso, Rondônia e Acre', 'MT / RO / AC', '66 99995-9998', 71],
-    ['Roberson', 'Representante comercial', 'AC', 'Mato Grosso, Rondônia e Acre', 'MT / RO / AC', '66 99995-9998', 72],
-    ['Sergio', 'Representante comercial', 'RJ', 'Rio de Janeiro', 'RJ', '24 99264-2238', 80],
-    ['Gilberto', 'Representante comercial', 'ES', 'Espírito Santo', 'ES', '27 99983-7167', 90],
-    ['Cintia', 'Representante comercial', 'TO', 'Tocantins', 'TO', '62 98133-6390', 100],
-    ['Thiago Dias', 'Representante comercial', 'BA', 'Bahia e Sergipe', 'BA / SE', '79 99987-8819', 110],
-    ['Thiago Dias', 'Representante comercial', 'SE', 'Bahia e Sergipe', 'BA / SE', '79 99987-8819', 111],
-    ['Eduardo Galvão', 'Representante comercial', 'AL', 'Alagoas e Pernambuco (São Bento do Una)', 'AL / PE', '82 9 9641-4435', 120],
-    ['Eduardo Galvão', 'Representante comercial', 'PE', 'Alagoas e Pernambuco (São Bento do Una)', 'AL / PE', '82 9 9641-4435', 121],
-    ['Charles Lima', 'Gerente Comercial Norte e Nordeste', 'PE', 'Pernambuco, Paraíba e Rio Grande do Norte', 'PE / PB / RN', '17 99757-0688', 130],
-    ['Charles Lima', 'Gerente Comercial Norte e Nordeste', 'PB', 'Pernambuco, Paraíba e Rio Grande do Norte', 'PE / PB / RN', '17 99757-0688', 131],
-    ['Charles Lima', 'Gerente Comercial Norte e Nordeste', 'RN', 'Pernambuco, Paraíba e Rio Grande do Norte', 'PE / PB / RN', '17 99757-0688', 132],
-    ['Valdir Castiglione', 'Representante comercial', 'CE', 'Ceará, Piauí, Maranhão e Pará', 'CE / PI / MA / PA', '85 98115-9972', 140],
-    ['Valdir Castiglione', 'Representante comercial', 'PI', 'Ceará, Piauí, Maranhão e Pará', 'CE / PI / MA / PA', '85 98115-9972', 141],
-    ['Valdir Castiglione', 'Representante comercial', 'MA', 'Ceará, Piauí, Maranhão e Pará', 'CE / PI / MA / PA', '85 98115-9972', 142],
-    ['Valdir Castiglione', 'Representante comercial', 'PA', 'Ceará, Piauí, Maranhão e Pará', 'CE / PI / MA / PA', '85 98115-9972', 143],
+    ['Jalmir Moy', 'Representante comercial', 'RS', 'Rio Grande do Sul', 'RS', '54 99974-8703', '/assets/representantes/jalmir-moy.png', 10],
+    ['Silvio Schlickmann', 'Representante comercial', 'SC', 'Santa Catarina', 'SC', '48 99947-1314', '/assets/representantes/silvio-schlickmann.png', 20],
+    ['Alessandro Martini', 'Representante comercial', 'PR', 'Paraná, São Paulo e Goiás', 'PR / SP / GO', '43 99122-3263', '/assets/representantes/alessandro-martini.png', 30],
+    ['Alessandro Martini', 'Representante comercial', 'SP', 'Paraná, São Paulo e Goiás', 'PR / SP / GO', '43 99122-3263', '/assets/representantes/alessandro-martini.png', 31],
+    ['Alessandro Martini', 'Representante comercial', 'GO', 'Paraná, São Paulo e Goiás', 'PR / SP / GO', '43 99122-3263', '/assets/representantes/alessandro-martini.png', 32],
+    ['Carlos Gastali', 'Representante comercial', 'MS', 'Mato Grosso do Sul e São Paulo (Bastos)', 'MS / Bastos, SP', '14 99857-6450', '', 40],
+    ['Carlos Gastali', 'Representante comercial', 'SP', 'Mato Grosso do Sul e São Paulo (Bastos)', 'MS / Bastos, SP', '14 99857-6450', '', 41],
+    ['Jair Luis', 'Representante comercial', 'SP', 'Atendimento comercial regional', 'SP', '14 99786-7924', '/assets/representantes/jair-luis.png', 50],
+    ['Matheus Fraga', 'Representante comercial', 'MG', 'Minas Gerais', 'MG', '17 99772-0946', '', 60],
+    ['Roberson Bergamini', 'Representante comercial', 'MT', 'Mato Grosso, Rondônia e Acre', 'MT / RO / AC', '66 99995-9998', '/assets/representantes/roberson-bergamini.png', 70],
+    ['Roberson Bergamini', 'Representante comercial', 'RO', 'Mato Grosso, Rondônia e Acre', 'MT / RO / AC', '66 99995-9998', '/assets/representantes/roberson-bergamini.png', 71],
+    ['Roberson Bergamini', 'Representante comercial', 'AC', 'Mato Grosso, Rondônia e Acre', 'MT / RO / AC', '66 99995-9998', '/assets/representantes/roberson-bergamini.png', 72],
+    ['Carlos Alberto', 'Representante comercial', 'RJ', 'Rio de Janeiro', 'RJ', '24 99264-2087', '', 80],
+    ['Gilberto Shwamback', 'Representante comercial', 'ES', 'Espírito Santo', 'ES', '27 99983-7167', '/assets/representantes/gilberto-shwamback.png', 90],
+    ['Cintia Fernandes', 'Representante comercial', 'TO', 'Tocantins', 'TO', '62 98133-6390', '/assets/representantes/cintia-fernandes.png', 100],
+    ['Thiago Dias', 'Representante comercial', 'BA', 'Bahia e Sergipe', 'BA / SE', '79 99987-8819', '/assets/representantes/thiago-dias.png', 110],
+    ['Thiago Dias', 'Representante comercial', 'SE', 'Bahia e Sergipe', 'BA / SE', '79 99987-8819', '/assets/representantes/thiago-dias.png', 111],
+    ['Eduardo Galvão', 'Representante comercial', 'AL', 'Alagoas e Pernambuco (São Bento do Una)', 'AL / PE', '82 9 9641-4435', '/assets/representantes/eduardo-galvao.png', 120],
+    ['Eduardo Galvão', 'Representante comercial', 'PE', 'Alagoas e Pernambuco (São Bento do Una)', 'AL / PE', '82 9 9641-4435', '/assets/representantes/eduardo-galvao.png', 121],
+    ['Charles Lima', 'Gerente Comercial Norte e Nordeste', 'PE', 'Pernambuco, Paraíba e Rio Grande do Norte', 'PE / PB / RN', '17 99757-0688', '', 130],
+    ['Charles Lima', 'Gerente Comercial Norte e Nordeste', 'PB', 'Pernambuco, Paraíba e Rio Grande do Norte', 'PE / PB / RN', '17 99757-0688', '', 131],
+    ['Charles Lima', 'Gerente Comercial Norte e Nordeste', 'RN', 'Pernambuco, Paraíba e Rio Grande do Norte', 'PE / PB / RN', '17 99757-0688', '', 132],
+    ['Valdir Castiglioni', 'Representante comercial', 'CE', 'Ceará, Piauí, Maranhão e Pará', 'CE / PI / MA / PA', '85 98115-9972', '', 140],
+    ['Valdir Castiglioni', 'Representante comercial', 'PI', 'Ceará, Piauí, Maranhão e Pará', 'CE / PI / MA / PA', '85 98115-9972', '', 141],
+    ['Valdir Castiglioni', 'Representante comercial', 'MA', 'Ceará, Piauí, Maranhão e Pará', 'CE / PI / MA / PA', '85 98115-9972', '', 142],
+    ['Valdir Castiglioni', 'Representante comercial', 'PA', 'Ceará, Piauí, Maranhão e Pará', 'CE / PI / MA / PA', '85 98115-9972', '', 143],
+    ['Departamento Comercial', 'Atendimento comercial', 'AM', 'Demais estados', 'AM / AP / RR / DF', '17 99757-2703', '', 200],
+    ['Departamento Comercial', 'Atendimento comercial', 'AP', 'Demais estados', 'AM / AP / RR / DF', '17 99757-2703', '', 201],
+    ['Departamento Comercial', 'Atendimento comercial', 'RR', 'Demais estados', 'AM / AP / RR / DF', '17 99757-2703', '', 202],
+    ['Departamento Comercial', 'Atendimento comercial', 'DF', 'Demais estados', 'AM / AP / RR / DF', '17 99757-2703', '', 203],
   ];
 
-  return rows.reduce((grouped, [name, role, uf, region, city, phone]) => {
+  return rows.reduce((grouped, [name, role, uf, region, city, phone, photo]) => {
     grouped[uf] ||= [];
     grouped[uf].push({
       name,
@@ -237,14 +241,13 @@ function fallbackRepresentativeMap() {
       city,
       phone,
       email: '',
-      photo: '',
+      photo,
       initials: initials(name),
       whatsapp: whatsapp(phone, name),
     });
     return grouped;
   }, {});
 }
-
 async function team(env) {
   if (!hasDb(env)) return fallbackTeamMembers();
   const { results } = await env.DB.prepare(
