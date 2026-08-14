@@ -1,5 +1,5 @@
 const LANGS = new Set(['pt', 'en', 'es']);
-const ASSET_VERSION = '20260812-1015';
+const ASSET_VERSION = '20260814-1150';
 
 const ROUTES = {
   '/': 'home',
@@ -78,6 +78,10 @@ export default {
     if (path === '/api/contact' && request.method === 'POST') return saveContact(request, env);
     if (path.startsWith('/api/admin/')) return adminApi(request, env, path);
     if (path === '/admin') return adminApp(request, env);
+
+    if (path === '/artigos/artigo-exemplo') {
+      return html(await renderArticleExamplePage(request, env));
+    }
 
     if (path === '/sitemap.xml') return sitemap(request, env);
     if (path === '/robots.txt') return text(`User-agent: *\nAllow: /\nSitemap: ${origin(env, request)}/sitemap.xml\n`, 'text/plain');
@@ -650,7 +654,58 @@ function bibliotecaPage() {
 }
 
 function artigosPage() {
-  return `<section class="internal-hero"><p class="eyebrow">Artigos</p><h1>Conteúdo técnico para quem decide por parâmetro.</h1><p>Artigos, comunicados e eventos apresentam informações sobre a Lohmann do Brasil, sua atuação técnica, suas linhagens e temas relevantes para o setor avícola.</p></section><section class="content-bands content-bands-rich"><div class="content-grid"><article class="content-card"><span>Engenharia de sistema</span><h2>A ave certa para cada manejo</h2><p>Conteúdos sobre escolha de linhagem conforme sistema produtivo, clima, mercado de saída e objetivo de performance.</p></article><article class="content-card"><span>Robustez e bem-estar</span><h2>Bem-estar como variável de eficiência</h2><p>Materiais sobre viabilidade, estresse, estabilidade de penas, mortalidade e impacto direto no resultado produtivo.</p></article><article class="content-card"><span>Suporte técnico</span><h2>Calibragem de campo</h2><p>Registros, agenda e orientações da rede técnica regional para manter o potencial genético ajustado à operação.</p></article></div><div class="split-panel"><div><p class="eyebrow">Editorial</p><h2>Linha editorial</h2></div><ul class="check-list"><li>Toda afirmação de performance deve ser tratada como parâmetro técnico, não como adjetivo solto.</li><li>Os temas devem considerar sistema produtivo, manejo, região, mercado de destino e qualidade de ovos.</li><li>Bem-estar deve aparecer como dado de eficiência, não como apelo emocional.</li><li>O conteúdo deve responder perguntas técnicas com estrutura clara para produtores, distribuidores e ferramentas de IA.</li></ul></div><div class="editorial-box"><p class="eyebrow">Planejamento</p><h2>Pautas prioritárias</h2><div class="mini-grid"><article><p>Como ler persistência de postura como indicador de decisão genética.</p></article><article><p>Por que sistemas alternativos exigem genética calibrada de forma diferente.</p></article><article><p>Como robustez, viabilidade e bem-estar entram na eficiência do lote.</p></article></div></div></section>`;
+  return `<section class="internal-hero"><p class="eyebrow">Artigos</p><h1>Artigos técnicos e institucionais.</h1><p>Esta área exibirá publicações da Lohmann do Brasil. Por enquanto, mantemos apenas um artigo modelo para validar o formato de listagem e a página interna.</p></section><section class="content-bands content-bands-rich article-list-section"><article class="article-card reveal"><span>Artigo modelo</span><h2>Como será exibido um artigo no site</h2><p>Modelo temporário para avaliar título, resumo, data, categoria e chamada para leitura completa.</p><div class="article-meta"><small>Categoria técnica</small><small>5 min de leitura</small></div><a class="button primary" href="/artigos/artigo-exemplo">Ver formato</a></article></section>`;
+}
+
+async function renderArticleExamplePage(request, env) {
+  const url = new URL(request.url);
+  const selectedLang = lang(url);
+  const custom = await customCodes(env).catch(() => emptyCustomCodes());
+  const canonical = `${origin(env, request)}/artigos/artigo-exemplo`;
+  const title = 'Artigo modelo | Lohmann do Brasil';
+  const description = 'Página modelo para validação de formato editorial dos artigos da Lohmann do Brasil.';
+
+  return `<!doctype html>
+<html lang="${h(langAttr(selectedLang))}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${h(title)}</title>
+  <meta name="description" content="${h(description)}">
+  <meta name="robots" content="noindex, follow">
+  <link rel="canonical" href="${h(canonical)}">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Lohmann do Brasil">
+  <meta property="og:title" content="${h(title)}">
+  <meta property="og:description" content="${h(description)}">
+  <meta property="og:url" content="${h(canonical)}">
+  <meta property="og:image" content="${h(origin(env, request))}/assets/logo-lohmann.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/site.css?v=${ASSET_VERSION}">
+  ${custom.head}
+</head>
+<body class="internal-page artigos-page article-detail-page">
+  ${custom.bodyStart}
+  ${localizedTopBar(selectedLang)}
+  ${localizedHeader('artigos', selectedLang)}
+  <main>${articleExampleContent(selectedLang)}</main>
+  ${footerCloud(selectedLang)}
+  <script src="/assets/site.js?v=${ASSET_VERSION}" defer></script>
+  ${custom.bodyEnd}
+</body>
+</html>`;
+}
+
+function articleExampleContent(selectedLang = 'pt') {
+  if (selectedLang === 'en') {
+    return `<article class="article-detail"><header class="article-detail-hero"><a class="back" href="/artigos?lang=en">Back to articles</a><p class="eyebrow">Sample article</p><h1>How an article will be displayed on the site</h1><p>This temporary page demonstrates the editorial structure for future Lohmann do Brasil articles.</p><div class="article-meta"><small>Technical category</small><small>5 min read</small></div></header><div class="article-body"><p>This opening paragraph introduces the subject with clear context and direct language. It is meant to show how the first screen of an article behaves on desktop and mobile.</p><h2>Section title for technical reading</h2><p>Article pages may include explanatory sections, short paragraphs and highlighted information to support producers, farms and distributors in technical decision-making.</p><blockquote>Highlighted excerpts can be used for important technical notes, source context or management recommendations.</blockquote><p>The final structure should remain clean, institutional and easy to scan. When real content is registered, this area will receive the official text, images and metadata.</p></div></article>`;
+  }
+  if (selectedLang === 'es') {
+    return `<article class="article-detail"><header class="article-detail-hero"><a class="back" href="/artigos?lang=es">Volver a artículos</a><p class="eyebrow">Artículo modelo</p><h1>Cómo se mostrará un artículo en el sitio</h1><p>Esta página temporal demuestra la estructura editorial para futuros artículos de Lohmann do Brasil.</p><div class="article-meta"><small>Categoría técnica</small><small>5 min de lectura</small></div></header><div class="article-body"><p>Este primer párrafo presenta el tema con contexto claro y lenguaje directo. Sirve para evaluar la lectura inicial en escritorio y móvil.</p><h2>Título de sección para lectura técnica</h2><p>Las páginas de artículos pueden incluir secciones explicativas, párrafos breves e información destacada para apoyar la decisión técnica.</p><blockquote>Los destacados pueden usarse para notas técnicas importantes, contexto de fuente o recomendaciones de manejo.</blockquote><p>La estructura final debe ser limpia, institucional y fácil de leer. Cuando se registre contenido real, esta área recibirá textos, imágenes y metadatos oficiales.</p></div></article>`;
+  }
+  return `<article class="article-detail"><header class="article-detail-hero"><a class="back" href="/artigos">Voltar para artigos</a><p class="eyebrow">Artigo modelo</p><h1>Como será exibido um artigo no site</h1><p>Esta página temporária demonstra a estrutura editorial para futuros artigos da Lohmann do Brasil.</p><div class="article-meta"><small>Categoria técnica</small><small>5 min de leitura</small></div></header><div class="article-body"><p>Este primeiro parágrafo apresenta o assunto com contexto claro e linguagem direta. Ele serve para validar como a abertura de um artigo se comporta em desktop e mobile.</p><h2>Título de seção para leitura técnica</h2><p>As páginas de artigos poderão trazer seções explicativas, parágrafos curtos e informações destacadas para apoiar produtores, granjas e distribuidores na tomada de decisão técnica.</p><blockquote>Trechos em destaque podem ser usados para notas técnicas importantes, contexto de fonte ou recomendações de manejo.</blockquote><p>A estrutura final deve permanecer limpa, institucional e fácil de percorrer. Quando houver conteúdo real cadastrado, esta área receberá o texto oficial, imagens e metadados do artigo.</p></div></article>`;
 }
 
 async function renderProductPage(slug, request, env) {
@@ -729,9 +784,25 @@ async function sitemap(request, env) {
 }
 
 async function adminApp(request, env) {
+  if (request.method === 'POST') {
+    const form = await request.formData();
+    const token = String(form.get('token') || '').trim();
+    if (env.ADMIN_TOKEN && token && token === env.ADMIN_TOKEN) {
+      return new Response(null, {
+        status: 303,
+        headers: {
+          location: '/admin',
+          'set-cookie': `admin_token=${encodeURIComponent(token)}; Path=/; Max-Age=86400; HttpOnly; Secure; SameSite=Strict`,
+          'cache-control': 'no-store',
+        },
+      });
+    }
+    return adminLoginPage('Token inválido. Confira o valor salvo em ADMIN_TOKEN.', 401);
+  }
+
   const auth = adminIdentity(request, env);
   if (!auth.ok) {
-    return html(`<!doctype html><meta charset="utf-8"><title>Administração | Lohmann do Brasil</title><body style="font-family:Arial,sans-serif;background:#111;color:#fff;padding:40px"><main style="max-width:760px;margin:auto"><p style="color:#f7a817;font-weight:700;text-transform:uppercase;letter-spacing:.12em">Administração</p><h1>Acesso protegido.</h1><p>Proteja a rota <strong>/admin</strong> com Cloudflare Access. Como alternativa técnica, defina o secret <strong>ADMIN_TOKEN</strong> e envie o cabeçalho <strong>x-admin-token</strong>.</p></main></body>`, { status: 403, headers: { 'cache-control': 'no-store' } });
+    return adminLoginPage(env.ADMIN_TOKEN ? '' : 'Antes de entrar, crie a variável secreta ADMIN_TOKEN nas configurações do Worker/Pages.', env.ADMIN_TOKEN ? 200 : 403);
   }
 
   return html(`<!doctype html>
@@ -771,15 +842,58 @@ async function adminApp(request, env) {
 </html>`, { headers: { 'cache-control': 'no-store' } });
 }
 
+function adminLoginPage(message = '', status = 200) {
+  return html(`<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Administração | Lohmann do Brasil</title>
+  <style>
+    body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0b0c0e;color:#fff;font-family:Arial,sans-serif;padding:28px}
+    main{width:min(100%,460px);background:#151515;border:1px solid rgba(247,168,23,.32);box-shadow:0 30px 90px rgba(0,0,0,.45);border-radius:24px;padding:34px}
+    p.kicker{color:#f7a817;font-weight:900;text-transform:uppercase;letter-spacing:.18em;font-size:12px;margin:0 0 18px}
+    h1{font-size:36px;line-height:1.05;margin:0 0 14px}
+    p{color:#d8d1c4;line-height:1.6}
+    label{display:grid;gap:8px;margin:26px 0 16px;font-weight:800}
+    input{border:1px solid rgba(255,255,255,.18);background:#08090b;color:#fff;border-radius:14px;padding:14px;font:600 16px Arial}
+    button{width:100%;border:0;border-radius:999px;background:#f7a817;color:#111;font-weight:900;padding:14px 18px;cursor:pointer}
+    .alert{background:rgba(247,168,23,.12);border-left:4px solid #f7a817;color:#fff;padding:12px 14px;border-radius:12px;margin:18px 0}
+    small{display:block;color:#8f887b;margin-top:18px;line-height:1.55}
+  </style>
+</head>
+<body>
+  <main>
+    <p class="kicker">Administração</p>
+    <h1>Acesso protegido.</h1>
+    <p>Informe o token administrativo configurado no Cloudflare para abrir o painel.</p>
+    ${message ? `<div class="alert">${h(message)}</div>` : ''}
+    <form method="post" action="/admin">
+      <label>Token de acesso
+        <input name="token" type="password" autocomplete="current-password" required autofocus>
+      </label>
+      <button type="submit">Entrar no painel</button>
+    </form>
+    <small>Recomendado: manter também Cloudflare Access protegendo a rota /admin para uma camada extra de segurança.</small>
+  </main>
+</body>
+</html>`, { status, headers: { 'cache-control': 'no-store' } });
+}
 function adminIdentity(request, env) {
   const accessEmail = request.headers.get('cf-access-authenticated-user-email');
   if (accessEmail) return { ok: true, user: accessEmail };
   const configuredToken = env.ADMIN_TOKEN;
-  const providedToken = request.headers.get('x-admin-token') || new URL(request.url).searchParams.get('token');
+  const providedToken = request.headers.get('x-admin-token') || new URL(request.url).searchParams.get('token') || cookieValue(request, 'admin_token');
   if (configuredToken && providedToken && configuredToken === providedToken) {
     return { ok: true, user: 'token-admin' };
   }
   return { ok: false, user: '' };
+}
+
+function cookieValue(request, name) {
+  const cookie = request.headers.get('cookie') || '';
+  const prefix = `${name}=`;
+  return cookie.split(';').map((part) => part.trim()).find((part) => part.startsWith(prefix))?.slice(prefix.length) || '';
 }
 
 async function adminApi(request, env, path) {
@@ -1164,7 +1278,13 @@ function translatedLibrary(selectedLang, t) {
 }
 
 function translatedArticles(selectedLang, t) {
-  return `<section class="internal-hero"><p class="eyebrow">${navLabel('artigos', selectedLang)}</p><h1>${h(t.articlesPageTitle)}</h1><p>${selectedLang === 'es' ? 'Artículos, comunicados y materiales sobre genética, manejo, soporte técnico y mercado.' : 'Articles, notices and materials about genetics, management, technical support and market.'}</p></section><section class="content-bands content-bands-rich"><div class="content-grid"><article class="content-card"><span>01</span><h2>${selectedLang === 'es' ? 'La ave adecuada para cada manejo' : 'The right bird for every management system'}</h2><p>${selectedLang === 'es' ? 'Contenido sobre elección de línea según sistema, clima, mercado y objetivo.' : 'Content about strain choice by system, climate, market and goal.'}</p></article><article class="content-card"><span>02</span><h2>${selectedLang === 'es' ? 'Bienestar como variable de eficiencia' : 'Welfare as an efficiency variable'}</h2><p>${selectedLang === 'es' ? 'Materiales sobre viabilidad, estrés, plumas, mortalidad y resultado productivo.' : 'Materials about viability, stress, feather cover, mortality and production result.'}</p></article></div></section>`;
+  const label = selectedLang === 'es' ? 'Artículo modelo' : 'Sample article';
+  const title = selectedLang === 'es' ? 'Cómo se mostrará un artículo en el sitio' : 'How an article will be displayed on the site';
+  const desc = selectedLang === 'es'
+    ? 'Modelo temporal para evaluar título, resumen, categoría y llamada para lectura completa.'
+    : 'Temporary model to review title, summary, category and the call to read the full article.';
+  const button = selectedLang === 'es' ? 'Ver formato' : 'View format';
+  return `<section class="internal-hero"><p class="eyebrow">${navLabel('artigos', selectedLang)}</p><h1>${h(t.articlesPageTitle)}</h1><p>${selectedLang === 'es' ? 'Esta área mostrará publicaciones de Lohmann do Brasil. Por ahora, mantenemos solo un artículo modelo para validar el formato.' : 'This area will display Lohmann do Brasil publications. For now, it keeps only one sample article to validate the format.'}</p></section><section class="content-bands content-bands-rich article-list-section"><article class="article-card reveal"><span>${h(label)}</span><h2>${h(title)}</h2><p>${h(desc)}</p><div class="article-meta"><small>${selectedLang === 'es' ? 'Categoría técnica' : 'Technical category'}</small><small>${selectedLang === 'es' ? '5 min de lectura' : '5 min read'}</small></div><a class="button primary" href="${localizedHref('/artigos/artigo-exemplo', selectedLang)}">${h(button)}</a></article></section>`;
 }
 
 function libraryDownloads(selectedLang = 'pt') {
