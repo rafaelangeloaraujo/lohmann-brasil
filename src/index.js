@@ -787,7 +787,8 @@ async function adminApp(request, env) {
   if (request.method === 'POST') {
     const form = await request.formData();
     const token = String(form.get('token') || '').trim();
-    if (env.ADMIN_TOKEN && token && token === env.ADMIN_TOKEN) {
+    const configuredToken = String(env.ADMIN_TOKEN || '').trim();
+    if (configuredToken && token && token === configuredToken) {
       return new Response(null, {
         status: 303,
         headers: {
@@ -882,7 +883,7 @@ function adminLoginPage(message = '', status = 200) {
 function adminIdentity(request, env) {
   const accessEmail = request.headers.get('cf-access-authenticated-user-email');
   if (accessEmail) return { ok: true, user: accessEmail };
-  const configuredToken = env.ADMIN_TOKEN;
+  const configuredToken = String(env.ADMIN_TOKEN || '').trim();
   const providedToken = request.headers.get('x-admin-token') || new URL(request.url).searchParams.get('token') || cookieValue(request, 'admin_token');
   if (configuredToken && providedToken && configuredToken === providedToken) {
     return { ok: true, user: 'token-admin' };
@@ -893,7 +894,12 @@ function adminIdentity(request, env) {
 function cookieValue(request, name) {
   const cookie = request.headers.get('cookie') || '';
   const prefix = `${name}=`;
-  return cookie.split(';').map((part) => part.trim()).find((part) => part.startsWith(prefix))?.slice(prefix.length) || '';
+  const value = cookie.split(';').map((part) => part.trim()).find((part) => part.startsWith(prefix))?.slice(prefix.length) || '';
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
 }
 
 async function adminApi(request, env, path) {
