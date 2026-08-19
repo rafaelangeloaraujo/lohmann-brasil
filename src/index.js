@@ -1,5 +1,5 @@
 const LANGS = new Set(['pt', 'en', 'es']);
-const ASSET_VERSION = '20260814-1150';
+const ASSET_VERSION = '20260819-knowledge-base';
 
 const ROUTES = {
   '/': 'home',
@@ -7,8 +7,7 @@ const ROUTES = {
   '/linhagens': 'linhagens',
   '/representantes': 'representantes',
   '/suporte-tecnico': 'suporte',
-  '/biblioteca': 'biblioteca',
-  '/artigos': 'artigos',
+  '/base-de-conhecimento': 'biblioteca',
   '/radar-tecnico': 'radar',
 };
 
@@ -18,8 +17,11 @@ const LEGACY_REDIRECTS = {
   '/linhagens.php': '/linhagens',
   '/representantes.php': '/representantes',
   '/suporte-tecnico.php': '/suporte-tecnico',
-  '/biblioteca.php': '/biblioteca',
-  '/noticias.php': '/artigos',
+  '/biblioteca': '/base-de-conhecimento',
+  '/biblioteca.php': '/base-de-conhecimento',
+  '/artigos': '/base-de-conhecimento',
+  '/artigos/artigo-exemplo': '/base-de-conhecimento',
+  '/noticias.php': '/base-de-conhecimento',
   '/radar-tecnico.php': '/radar-tecnico',
 };
 
@@ -40,8 +42,16 @@ const pageFallback = {
     title: 'Representantes | Lohmann do Brasil',
     description: 'Encontre representantes da Lohmann do Brasil por estado para atendimento técnico e comercial.',
   },
+  suporte: {
+    title: 'Suporte técnico | Lohmann do Brasil',
+    description: 'Acompanhamento técnico para manejo, leitura de indicadores e organização da rotina produtiva.',
+  },
+  biblioteca: {
+    title: 'Base de Conhecimento | Lohmann do Brasil',
+    description: 'Guias de manejo, planilhas de acompanhamento e materiais técnicos para apoio à rotina produtiva.',
+  },
   radar: {
-    title: 'Radar Técnico | Lohmann do Brasil',
+    title: 'Radar de Mercado | Lohmann do Brasil',
     description: 'Indicadores de mercado para apoio à leitura técnica do setor avícola.',
   },
 };
@@ -78,10 +88,6 @@ export default {
     if (path === '/api/contact' && request.method === 'POST') return saveContact(request, env);
     if (path.startsWith('/api/admin/')) return adminApi(request, env, path).catch((error) => json({ ok: false, message: error?.message || 'Erro ao carregar dados administrativos.' }, { status: 500 }));
     if (path === '/admin') return adminApp(request, env);
-
-    if (path === '/artigos/artigo-exemplo') {
-      return html(await renderArticleExamplePage(request, env));
-    }
 
     if (path === '/sitemap.xml') return sitemap(request, env);
     if (path === '/robots.txt') return text(`User-agent: *\nAllow: /\nSitemap: ${origin(env, request)}/sitemap.xml\n`, 'text/plain');
@@ -383,14 +389,14 @@ function translatedMeta(pageKey, selectedLang, fallback) {
     sobre: ['About Lohmann | Lohmann do Brasil', 'Institutional presence of Lohmann do Brasil in layer genetics, technical support and the poultry sector.'],
     linhagens: ['Lohmann Strains | Lohmann do Brasil', 'LOHMANN LSL-LITE and LOHMANN BROWN-LITE strains for different production systems and markets.'],
     representantes: ['Representatives | Lohmann do Brasil', 'Find Lohmann do Brasil representatives by state for technical and commercial service.'],
-    radar: ['Technical Radar | Lohmann do Brasil', 'Market indicators to support technical reading in the poultry sector.'],
+    radar: ['Market Radar | Lohmann do Brasil', 'Market indicators to support technical and commercial reading in the poultry sector.'],
   };
   const es = {
     home: ['Lohmann do Brasil | Genética avícola y soporte técnico', 'Líneas de postura, soporte técnico e información para productores, granjas y distribuidores en Brasil.'],
     sobre: ['La Lohmann | Lohmann do Brasil', 'Actuación institucional de Lohmann do Brasil en genética de postura, soporte técnico y sector avícola.'],
     linhagens: ['Líneas Lohmann | Lohmann do Brasil', 'Líneas LOHMANN LSL-LITE y LOHMANN BROWN-LITE para diferentes sistemas productivos y mercados.'],
     representantes: ['Representantes | Lohmann do Brasil', 'Encuentre representantes de Lohmann do Brasil por estado para atención técnica y comercial.'],
-    radar: ['Radar Técnico | Lohmann do Brasil', 'Indicadores de mercado para apoyar la lectura técnica del sector avícola.'],
+    radar: ['Radar de Mercado | Lohmann do Brasil', 'Indicadores de mercado para apoyar la lectura técnica del sector avícola.'],
   };
   const item = (selectedLang === 'es' ? es : en)[pageKey];
   return item ? { title: item[0], description: item[1] } : fallback;
@@ -476,10 +482,9 @@ function header(active) {
     ['/linhagens', 'Linhagens', 'linhagens'],
     ['/representantes', 'Representantes', 'representantes'],
     ['/suporte-tecnico', 'Suporte técnico', 'suporte'],
-    ['/biblioteca', 'Biblioteca', 'biblioteca'],
-    ['/artigos', 'Artigos', 'artigos'],
+    ['/base-de-conhecimento', 'Base de Conhecimento', 'biblioteca'],
     ['/#contato', 'Contato', 'contato'],
-    ['/radar-tecnico', '<span></span>Radar Técnico', 'radar'],
+    ['/radar-tecnico', '<span></span>Radar de Mercado', 'radar'],
   ].map(([href, label, key]) => `<a class="${key === active ? 'active' : ''} ${key === 'radar' ? 'radar-nav-link' : ''}" href="${href}">${label}</a>`).join('');
   return `<header class="site-header"><a class="brand" href="/" aria-label="Lohmann do Brasil"><img class="logo-top" src="/assets/logo-lohmann-header-white.png" alt="Lohmann do Brasil"><img class="logo-scrolled" src="/assets/logo-lohmann.png" alt="Lohmann do Brasil"></a><button class="menu-toggle" type="button" aria-label="Menu" aria-expanded="false"><span></span><span></span></button><nav class="nav" aria-label="Principal">${nav}</nav><div class="header-actions"><a class="portal-link" href="https://ovoflock.com/login" target="_blank" rel="noopener">Ovoflock</a></div></header>`;
 }
@@ -496,8 +501,7 @@ function renderMain(pageKey, productRows, repRows, teamRows, sections = {}, sele
   if (pageKey === 'representantes') return translateStatic(reps(repRows, sections), selectedLang);
   if (pageKey === 'radar') return translateStatic(radar(sections), selectedLang);
   if (pageKey === 'suporte') return simplePage('Suporte técnico', 'Acompanhamento técnico para manejo, leitura de indicadores e organização da rotina produtiva.');
-  if (pageKey === 'biblioteca') return simplePage('Biblioteca', 'Planilhas, materiais técnicos e conteúdos de apoio para acompanhamento de sistemas de postura.');
-  if (pageKey === 'artigos') return simplePage('Artigos', 'Conteúdos técnicos e institucionais para produtores, granjas e distribuidores.');
+  if (pageKey === 'biblioteca') return simplePage('Base de Conhecimento', 'Planilhas, guias, materiais técnicos e conteúdos de apoio para acompanhamento de sistemas de postura.');
   return translateStatic(home(productRows), selectedLang);
 }
 
@@ -512,10 +516,9 @@ function headerCloud(active) {
     ['/linhagens', 'Linhagens', 'linhagens'],
     ['/representantes', 'Representantes', 'representantes'],
     ['/suporte-tecnico', 'Suporte técnico', 'suporte'],
-    ['/biblioteca', 'Biblioteca', 'biblioteca'],
-    ['/artigos', 'Artigos', 'artigos'],
+    ['/base-de-conhecimento', 'Base de Conhecimento', 'biblioteca'],
     ['/#contato', 'Contato', 'contato'],
-    ['/radar-tecnico', '<span></span>Radar Técnico', 'radar'],
+    ['/radar-tecnico', '<span></span>Radar de Mercado', 'radar'],
   ].map(([href, label, key]) => `<a class="${key === active ? 'active' : ''} ${key === 'radar' ? 'radar-nav-link' : ''}" href="${href}">${label}</a>`).join('');
 
   return `<header class="site-header"><a class="brand" href="/" aria-label="Lohmann do Brasil"><img class="logo-top" src="/assets/logo-lohmann-header-white.png" alt="Lohmann do Brasil"><img class="logo-scrolled" src="/assets/logo-lohmann.png" alt="Lohmann do Brasil"></a><button class="menu-toggle" type="button" aria-label="Menu" aria-expanded="false"><span></span><span></span></button><nav class="nav" aria-label="Principal">${nav}</nav><div class="header-actions"><a class="portal-link" href="https://ovoflock.com/login" target="_blank" rel="noopener">Ovoflock</a></div></header>`;
@@ -539,9 +542,8 @@ function homeCloud(productRows, sections = {}) {
   <section class="technical" id="tecnico"><div class="technical-copy reveal"><p class="eyebrow light">Suporte técnico</p><h2>Acompanhamento para transformar potencial genético em resultado previsível.</h2><p>Materiais, treinamentos e atendimento regional apoiam a rotina de manejo, a leitura de indicadores e a tomada de decisão ao longo do ciclo produtivo.</p><a class="button light" href="/suporte-tecnico">Saiba mais</a></div><div class="technical-list"><article><span>01</span><h3>Documentos técnicos</h3><p>Guias e materiais para padronizar leitura de manejo, indicadores e rotina produtiva.</p></article><article><span>02</span><h3>Treinamentos</h3><p>Conteúdo técnico organizado por sistema, etapa produtiva e objetivo de performance.</p></article><article><span>03</span><h3>Gestão de manejo</h3><p>Ferramentas para acompanhar lote, interpretar desvios e antecipar ajustes de manejo.</p></article></div></section>
   <section class="representatives-shortcut section"><div class="shortcut-copy reveal"><p class="eyebrow">Representantes</p><h2>${h(sectionValue(sections, 'representantes', 'title_pt', 'Rede técnica regional para calibrar decisão e manejo.'))}</h2><p>${h(sectionValue(sections, 'representantes', 'text_pt', 'Encontre o contato responsável pelo seu estado e direcione dúvidas comerciais, técnicas e de distribuição.'))}</p><a class="button primary" href="${h(sectionValue(sections, 'representantes', 'button_url', '/representantes'))}">${h(sectionValue(sections, 'representantes', 'button_label_pt', 'Ver representantes'))}</a></div><div class="shortcut-image reveal" aria-hidden="true"><img src="${h(sectionValue(sections, 'representantes', 'image_path', '/assets/representantes-atalho.png'))}" alt=""></div></section>
   <section class="innovation"><div class="innovation-visual" aria-hidden="true"><div class="analysis-egg"><span></span><i></i></div><span class="metric metric-one"><b>360°</b> sistema calibrado</span><span class="metric metric-two"><b>24/7</b> dados de produção</span><div class="radar"></div></div><div class="innovation-copy reveal"><p class="eyebrow">Ovoflock</p><h2>Dados de produção e rotina técnica em um só ambiente.</h2><p>Uma plataforma para apoiar o acompanhamento de lotes, indicadores e decisões operacionais com mais organização.</p><ul><li>Indicadores de lote</li><li>Acompanhamento produtivo</li><li>Gestão operacional</li><li>Dados para decisão</li></ul><a class="button primary" href="https://ovoflock.com/login" target="_blank" rel="noopener">Acessar Ovoflock</a></div></section>
-  <section class="news section" id="artigos"><header class="section-heading"><div><p class="eyebrow">Artigos</p><h2>Artigos técnicos e institucionais.</h2></div><p>Conteúdos sobre linhagens, manejo, suporte técnico, mercado e presença da Lohmann do Brasil no setor avícola.</p></header></section>
   <section class="partners-section section" id="parceiros"><header class="section-heading"><div><p class="eyebrow">Parceiros</p><h2>Relações que fortalecem a presença da Lohmann no campo.</h2></div><p>Empresas parceiras conectam genética, produção, distribuição e mercado com atuação próxima ao setor avícola brasileiro.</p></header><div class="partners-grid"><article class="partner-card reveal"><img src="/assets/logo-parceiro-tangara.png?v=${ASSET_VERSION}" alt="Tangará"></article><article class="partner-card reveal"><img src="/assets/logo-parceiro-ovos-sousa.png?v=${ASSET_VERSION}" alt="Ovos Sousa"></article></div></section>
-  <section class="technical-radar radar-shortcut section" id="radar-tecnico"><header class="section-heading"><div><p class="eyebrow"><span class="live-dot"></span>Radar Técnico</p><h2>Indicadores de mercado em uma página dedicada.</h2></div><p>Acompanhe referências de mercado para ovos em diferentes praças brasileiras e use os dados como apoio para leitura técnica e comercial.</p></header><a class="button primary" href="/radar-tecnico">Abrir Radar Técnico</a></section>
+  <section class="technical-radar radar-shortcut section" id="radar-tecnico"><header class="section-heading"><div><p class="eyebrow"><span class="live-dot"></span>Radar de Mercado</p><h2>Indicadores de mercado em uma página dedicada.</h2></div><p>Acompanhe referências de mercado para ovos em diferentes praças brasileiras e use os dados como apoio para leitura técnica e comercial.</p></header><a class="button primary" href="/radar-tecnico">Abrir Radar de Mercado</a></section>
   <section class="contact" id="contato"><div class="contact-copy"><p class="eyebrow light">Contato</p><h2>Fale com a equipe Lohmann do Brasil.</h2><p>Envie sua solicitação para direcionarmos o atendimento.</p><address>Rua Theofilo Mancor, 670<br>Nova Granada, SP<br>CEP 15440-000</address></div><form action="/api/contact" method="post" class="contact-form"><label>Nome<input name="name" required></label><label>Empresa<input name="company"></label><label>E-mail<input type="email" name="email" required></label><label>Telefone<input name="phone"></label><label class="wide">Assunto<input name="subject"></label><label class="wide">Mensagem<textarea name="message" rows="4" required></textarea></label><button class="button light" type="submit">Enviar</button></form></section>`;
 }
 
@@ -555,7 +557,7 @@ function home(productRows, sections = {}) {
   <section class="section"><header class="section-heading"><div><p class="eyebrow">Lohmann do Brasil</p><h2>${h(sectionValue(sections, 'about', 'title_pt', 'Atuação baseada em genética, manejo e acompanhamento técnico.'))}</h2></div><p>${h(sectionValue(sections, 'about', 'text_pt', 'Um trabalho construído para reduzir incertezas no campo e apoiar decisões por sistema produtivo.'))}</p></header></section>
   ${productGrid(productRows)}
   <section class="representatives-home"><div><p class="eyebrow">Rede regional</p><h2>${h(sectionValue(sections, 'representantes', 'title_pt', 'Encontre representantes por estado.'))}</h2><p>${h(sectionValue(sections, 'representantes', 'text_pt', 'O mapa interativo direciona o contato técnico e comercial conforme a região de atendimento.'))}</p><a class="button primary" href="${h(sectionValue(sections, 'representantes', 'button_url', '/representantes'))}">${h(sectionValue(sections, 'representantes', 'button_label_pt', 'Ver representantes'))}</a></div><img src="${h(sectionValue(sections, 'representantes', 'image_path', '/assets/representantes-atalho.png'))}" alt=""></section>
-  <section class="technical-radar-short"><div><p class="eyebrow">Radar Técnico</p><h2>${h(sectionValue(sections, 'radar', 'title_pt', 'Leitura de mercado para apoiar decisões.'))}</h2><p>${h(sectionValue(sections, 'radar', 'text_pt', 'Acompanhe indicadores de referência em uma página dedicada.'))}</p><a class="button light" href="${h(sectionValue(sections, 'radar', 'button_url', '/radar-tecnico'))}">${h(sectionValue(sections, 'radar', 'button_label_pt', 'Abrir radar'))}</a></div></section>
+  <section class="technical-radar-short"><div><p class="eyebrow">Radar de Mercado</p><h2>${h(sectionValue(sections, 'radar', 'title_pt', 'Leitura de mercado para apoiar decisões.'))}</h2><p>${h(sectionValue(sections, 'radar', 'text_pt', 'Acompanhe indicadores de referência em uma página dedicada.'))}</p><a class="button light" href="${h(sectionValue(sections, 'radar', 'button_url', '/radar-tecnico'))}">${h(sectionValue(sections, 'radar', 'button_label_pt', 'Abrir radar'))}</a></div></section>
   <section class="contact" id="contato"><div class="contact-copy"><p class="eyebrow light">Contato</p><h2>Fale com a equipe Lohmann do Brasil.</h2><p>Envie sua solicitação para direcionarmos o atendimento.</p></div><form action="/api/contact" method="post" class="contact-form"><label>Nome<input name="name" required></label><label>Empresa<input name="company"></label><label>E-mail<input type="email" name="email" required></label><label>Telefone<input name="phone"></label><label class="wide">Assunto<input name="subject"></label><label class="wide">Mensagem<textarea name="message" rows="4" required></textarea></label><button class="button light" type="submit">Enviar</button></form></section>`;
 }
 
@@ -623,13 +625,14 @@ function reps(repRows) {
 }
 
 function radar() {
-  return `<section class="internal-hero radar-page-hero"><p class="eyebrow"><span class="live-dot"></span>Radar Técnico</p><h1>Indicadores de mercado para decisão técnica.</h1><p>Acompanhe referências de preço para ovos em praças brasileiras. Os dados servem como apoio para análise técnica e comercial, sempre combinados com a realidade produtiva de cada operação.</p></section><section class="technical-radar section radar-page"><header class="section-heading"><div><p class="eyebrow">Mercado de ovos</p><h2>Cotações de referência</h2></div><p>Indicadores de mercado ajudam a contextualizar decisões técnicas, comerciais e de alojamento quando analisados junto aos dados de produção.</p></header><div class="radar-dashboard"><aside class="radar-insights"><p class="eyebrow">Leitura técnica</p><h2>Preço é contexto. Decisão depende de sistema.</h2><p>O Radar Técnico foi pensado como ponto de consulta para produtores, granjas e distribuidores acompanharem referências de mercado sem perder a visão produtiva.</p><div class="radar-insight-grid"><article><span>01</span><strong>Mercado</strong><p>Compare praças, tipo de ovo e variações regionais para entender pressão comercial.</p></article><article><span>02</span><strong>Produção</strong><p>Relacione preço, idade do lote, persistência, consumo e qualidade de ovos.</p></article><article><span>03</span><strong>Manejo</strong><p>Use os indicadores como apoio, não como leitura isolada da eficiência do sistema.</p></article></div></aside><div class="cepea-widget-card"><script type="text/javascript" src="https://cepea.org.br/br/widgetproduto.js.php?fonte=arial&tamanho=10&largura=100%25&corfundo=242424&cortexto=ffffff&corlinha=f78e05&id_indicador%5B%5D=159-Bastos+(SP)+-+FOB-branco&id_indicador%5B%5D=159-Grande+BH+-+(MG)+-+CIF-branco&id_indicador%5B%5D=159-Grande+SP+(SP)+-+CIF-branco&id_indicador%5B%5D=159-Recife+(PE)+-+CIF-branco&id_indicador%5B%5D=159-S.+M.+de+Jetib%C3%A1+(ES)+-+FOB-branco&id_indicador%5B%5D=159-Bastos+(SP)+-+FOB-vermelho&id_indicador%5B%5D=159-Grande+BH+-+(MG)+-+CIF-vermelho&id_indicador%5B%5D=159-Grande+SP+(SP)+-+CIF-vermelho&id_indicador%5B%5D=159-Recife+(PE)+-+CIF-vermelho&id_indicador%5B%5D=159-S.+M.+de+Jetib%C3%A1+(ES)+-+FOB-vermelho&id_indicador%5B%5D=12&id_indicador%5B%5D=92"></script></div></div></section>`;
+  return `<section class="internal-hero radar-page-hero"><p class="eyebrow"><span class="live-dot"></span>Radar de Mercado</p><h1>Indicadores de mercado para decisão técnica.</h1><p>Acompanhe referências de preço para ovos em praças brasileiras. Os dados servem como apoio para análise técnica e comercial, sempre combinados com a realidade produtiva de cada operação.</p></section><section class="technical-radar section radar-page"><header class="section-heading"><div><p class="eyebrow">Mercado de ovos</p><h2>Cotações de referência</h2></div><p>Indicadores de mercado ajudam a contextualizar decisões técnicas, comerciais e de alojamento quando analisados junto aos dados de produção.</p></header><div class="radar-dashboard"><aside class="radar-insights"><p class="eyebrow">Leitura técnica</p><h2>Preço é contexto. Decisão depende de sistema.</h2><p>O Radar de Mercado foi pensado como ponto de consulta para produtores, granjas e distribuidores acompanharem referências de mercado sem perder a visão produtiva.</p><div class="radar-insight-grid"><article><span>01</span><strong>Mercado</strong><p>Compare praças, tipo de ovo e variações regionais para entender pressão comercial.</p></article><article><span>02</span><strong>Produção</strong><p>Relacione preço, idade do lote, persistência, consumo e qualidade de ovos.</p></article><article><span>03</span><strong>Manejo</strong><p>Use os indicadores como apoio, não como leitura isolada da eficiência do sistema.</p></article></div></aside><div class="cepea-widget-card"><script type="text/javascript" src="https://cepea.org.br/br/widgetproduto.js.php?fonte=arial&tamanho=10&largura=100%25&corfundo=242424&cortexto=ffffff&corlinha=f78e05&id_indicador%5B%5D=159-Bastos+(SP)+-+FOB-branco&id_indicador%5B%5D=159-Grande+BH+-+(MG)+-+CIF-branco&id_indicador%5B%5D=159-Grande+SP+(SP)+-+CIF-branco&id_indicador%5B%5D=159-Recife+(PE)+-+CIF-branco&id_indicador%5B%5D=159-S.+M.+de+Jetib%C3%A1+(ES)+-+FOB-branco&id_indicador%5B%5D=159-Bastos+(SP)+-+FOB-vermelho&id_indicador%5B%5D=159-Grande+BH+-+(MG)+-+CIF-vermelho&id_indicador%5B%5D=159-Grande+SP+(SP)+-+CIF-vermelho&id_indicador%5B%5D=159-Recife+(PE)+-+CIF-vermelho&id_indicador%5B%5D=159-S.+M.+de+Jetib%C3%A1+(ES)+-+FOB-vermelho&id_indicador%5B%5D=12&id_indicador%5B%5D=92"></script></div></div></section>`;
 }
 
 function simplePage(title, description) {
   if (title === 'Suporte técnico') return suportePage();
+  if (title === 'Base de Conhecimento') return bibliotecaPage();
   if (title === 'Biblioteca') return bibliotecaPage();
-  if (title === 'Artigos') return artigosPage();
+  if (title === 'Artigos') return bibliotecaPage();
   return `<section class="internal-hero"><p class="eyebrow">${h(title)}</p><h1>${h(title)}</h1><p>${h(description)}</p></section>`;
 }
 
@@ -647,65 +650,15 @@ function suportePage() {
 function bibliotecaPage() {
   const items = [
     ['01', 'Planilhas de acompanhamento de lote', 'Modelos para organizar dados de produção, consumo, mortalidade, peso de ovos e rotina de leitura técnica.'],
-    ['02', 'Controle de produção e indicadores', 'Materiais de apoio para registrar informações operacionais e acompanhar desvios ao longo do ciclo produtivo.'],
-    ['03', 'Materiais de manejo e decisão', 'Arquivos voltados à padronização de consultas técnicas, histórico de lotes e acompanhamento em campo.'],
+    ['02', 'Guias de manejo', 'Materiais oficiais para consulta técnica de recria, produção, ambiência e sistemas alternativos.'],
+    ['03', 'Artigos e conteúdo técnico', 'Publicações institucionais e textos de apoio passam a ficar centralizados nesta base para facilitar a consulta.'],
+    ['04', 'Controle de produção e indicadores', 'Arquivos voltados à padronização de registros, histórico de lotes e acompanhamento em campo.'],
   ];
-  return `<section class="internal-hero"><p class="eyebrow">Biblioteca</p><h1>Planilhas e materiais de apoio técnico.</h1><p>A biblioteca organiza arquivos de consulta para acompanhamento de lotes, leitura de indicadores e apoio à rotina de manejo.</p></section><section class="content-bands content-bands-rich library-page"><div class="content-grid">${items.map(([n, title, text]) => `<article class="content-card"><span>${n}</span><h2>${title}</h2><p>${text}</p></article>`).join('')}</div>${libraryDownloads('pt')}</section>`;
+  return `<section class="internal-hero"><p class="eyebrow">Base de Conhecimento</p><h1>Materiais técnicos, guias e conteúdos para consulta.</h1><p>A Base de Conhecimento organiza arquivos de manejo, planilhas de acompanhamento e conteúdos técnicos em um único ambiente de apoio à rotina produtiva.</p></section><section class="content-bands content-bands-rich library-page"><div class="content-grid">${items.map(([n, title, text]) => `<article class="content-card"><span>${n}</span><h2>${title}</h2><p>${text}</p></article>`).join('')}</div>${libraryDownloads('pt')}</section>`;
 }
 
 function artigosPage() {
   return `<section class="internal-hero"><p class="eyebrow">Artigos</p><h1>Artigos técnicos e institucionais.</h1><p>Esta área exibirá publicações da Lohmann do Brasil. Por enquanto, mantemos apenas um artigo modelo para validar o formato de listagem e a página interna.</p></section><section class="content-bands content-bands-rich article-list-section"><article class="article-card reveal"><span>Artigo modelo</span><h2>Como será exibido um artigo no site</h2><p>Modelo temporário para avaliar título, resumo, data, categoria e chamada para leitura completa.</p><div class="article-meta"><small>Categoria técnica</small><small>5 min de leitura</small></div><a class="button primary" href="/artigos/artigo-exemplo">Ver formato</a></article></section>`;
-}
-
-async function renderArticleExamplePage(request, env) {
-  const url = new URL(request.url);
-  const selectedLang = lang(url);
-  const custom = await customCodes(env).catch(() => emptyCustomCodes());
-  const canonical = `${origin(env, request)}/artigos/artigo-exemplo`;
-  const title = 'Artigo modelo | Lohmann do Brasil';
-  const description = 'Página modelo para validação de formato editorial dos artigos da Lohmann do Brasil.';
-
-  return `<!doctype html>
-<html lang="${h(langAttr(selectedLang))}">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${h(title)}</title>
-  <meta name="description" content="${h(description)}">
-  <meta name="robots" content="noindex, follow">
-  <link rel="canonical" href="${h(canonical)}">
-  <meta property="og:type" content="article">
-  <meta property="og:site_name" content="Lohmann do Brasil">
-  <meta property="og:title" content="${h(title)}">
-  <meta property="og:description" content="${h(description)}">
-  <meta property="og:url" content="${h(canonical)}">
-  <meta property="og:image" content="${h(origin(env, request))}/assets/logo-lohmann.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/assets/site.css?v=${ASSET_VERSION}">
-  ${custom.head}
-</head>
-<body class="internal-page artigos-page article-detail-page">
-  ${custom.bodyStart}
-  ${localizedTopBar(selectedLang)}
-  ${localizedHeader('artigos', selectedLang)}
-  <main>${articleExampleContent(selectedLang)}</main>
-  ${footerCloud(selectedLang)}
-  <script src="/assets/site.js?v=${ASSET_VERSION}" defer></script>
-  ${custom.bodyEnd}
-</body>
-</html>`;
-}
-
-function articleExampleContent(selectedLang = 'pt') {
-  if (selectedLang === 'en') {
-    return `<article class="article-detail"><header class="article-detail-hero"><a class="back" href="/artigos?lang=en">Back to articles</a><p class="eyebrow">Sample article</p><h1>How an article will be displayed on the site</h1><p>This temporary page demonstrates the editorial structure for future Lohmann do Brasil articles.</p><div class="article-meta"><small>Technical category</small><small>5 min read</small></div></header><div class="article-body"><p>This opening paragraph introduces the subject with clear context and direct language. It is meant to show how the first screen of an article behaves on desktop and mobile.</p><h2>Section title for technical reading</h2><p>Article pages may include explanatory sections, short paragraphs and highlighted information to support producers, farms and distributors in technical decision-making.</p><blockquote>Highlighted excerpts can be used for important technical notes, source context or management recommendations.</blockquote><p>The final structure should remain clean, institutional and easy to scan. When real content is registered, this area will receive the official text, images and metadata.</p></div></article>`;
-  }
-  if (selectedLang === 'es') {
-    return `<article class="article-detail"><header class="article-detail-hero"><a class="back" href="/artigos?lang=es">Volver a artículos</a><p class="eyebrow">Artículo modelo</p><h1>Cómo se mostrará un artículo en el sitio</h1><p>Esta página temporal demuestra la estructura editorial para futuros artículos de Lohmann do Brasil.</p><div class="article-meta"><small>Categoría técnica</small><small>5 min de lectura</small></div></header><div class="article-body"><p>Este primer párrafo presenta el tema con contexto claro y lenguaje directo. Sirve para evaluar la lectura inicial en escritorio y móvil.</p><h2>Título de sección para lectura técnica</h2><p>Las páginas de artículos pueden incluir secciones explicativas, párrafos breves e información destacada para apoyar la decisión técnica.</p><blockquote>Los destacados pueden usarse para notas técnicas importantes, contexto de fuente o recomendaciones de manejo.</blockquote><p>La estructura final debe ser limpia, institucional y fácil de leer. Cuando se registre contenido real, esta área recibirá textos, imágenes y metadatos oficiales.</p></div></article>`;
-  }
-  return `<article class="article-detail"><header class="article-detail-hero"><a class="back" href="/artigos">Voltar para artigos</a><p class="eyebrow">Artigo modelo</p><h1>Como será exibido um artigo no site</h1><p>Esta página temporária demonstra a estrutura editorial para futuros artigos da Lohmann do Brasil.</p><div class="article-meta"><small>Categoria técnica</small><small>5 min de leitura</small></div></header><div class="article-body"><p>Este primeiro parágrafo apresenta o assunto com contexto claro e linguagem direta. Ele serve para validar como a abertura de um artigo se comporta em desktop e mobile.</p><h2>Título de seção para leitura técnica</h2><p>As páginas de artigos poderão trazer seções explicativas, parágrafos curtos e informações destacadas para apoiar produtores, granjas e distribuidores na tomada de decisão técnica.</p><blockquote>Trechos em destaque podem ser usados para notas técnicas importantes, contexto de fonte ou recomendações de manejo.</blockquote><p>A estrutura final deve permanecer limpa, institucional e fácil de percorrer. Quando houver conteúdo real cadastrado, esta área receberá o texto oficial, imagens e metadados do artigo.</p></div></article>`;
 }
 
 async function renderProductPage(slug, request, env) {
@@ -718,9 +671,22 @@ async function renderProductPage(slug, request, env) {
   const metaTitle = `${product.name} | Lohmann do Brasil`;
   const metaDescription = product.summary || (selectedLang === 'es' ? 'Línea Lohmann para sistemas comerciales de postura.' : selectedLang === 'en' ? 'Lohmann strain for commercial layer systems.' : 'Linhagem Lohmann para sistemas de postura comercial.');
 
-  const main = translateStatic(`<section class="product-hero"><div class="product-hero-copy"><a class="back" href="${localizedHref('/linhagens', selectedLang)}">Voltar</a><p class="eyebrow">Linhagem | ${h(product.egg_color)}</p><h1>${h(product.name)}</h1><p>${h(product.summary)}</p><a class="button primary" href="${localizedHref('/#contato', selectedLang)}">Solicitar diagnóstico técnico</a></div><div class="product-hero-art product-hero-hen" aria-hidden="true"><img src="${image}" alt=""><span>${h(product.egg_color)}</span></div></section><article class="product-content product-content-rich"><section class="product-specs"><div class="product-specs-head"><p class="eyebrow">Dados produtivos</p><h2>Indicadores técnicos da ${h(product.name)}.</h2><p>Informações de referência para análise de potencial produtivo, qualidade de ovos, consumo, peso corporal e viabilidade.</p></div><div class="product-specs-intro">${specs.intro.map(([label, value]) => `<article><span>${h(label)}</span><strong>${h(value)}</strong></article>`).join('')}</div><div class="product-specs-grid">${specs.groups.map(([title, items]) => `<article><h3>${h(title)}</h3><ul>${items.map((item) => `<li>${h(item)}</li>`).join('')}</ul></article>`).join('')}</div></section><p class="eyebrow">Informações da linhagem</p><h2>Para cada manejo, a ave certa.</h2><p>${product.slug.includes('brown') ? 'A LOHMANN BROWN-LITE atende operações orientadas ao mercado de ovos marrons, com foco em persistência, qualidade de casca e ajuste ao sistema produtivo.' : 'A LOHMANN LSL-LITE atende operações orientadas ao mercado de ovos brancos, com foco em uniformidade, eficiência alimentar e manejo previsível.'}</p><p>Indicadores técnicos devem ser interpretados junto ao manejo, clima, ambiência, mercado de destino e acompanhamento de campo.</p><div class="product-pillars"><section><span>01</span><p>Escolha genética orientada por sistema produtivo.</p></section><section><span>02</span><p>Leitura de consumo, viabilidade, persistência e qualidade de ovos.</p></section><section><span>03</span><p>Suporte técnico para calibragem em campo.</p></section></div></article>`, selectedLang);
+  const main = translateStatic(`<section class="product-hero"><div class="product-hero-copy"><a class="back" href="${localizedHref('/linhagens', selectedLang)}">Voltar</a><p class="eyebrow">Linhagem | ${h(product.egg_color)}</p><h1>${h(product.name)}</h1><p>${h(product.summary)}</p><a class="button primary" href="${localizedHref('/#contato', selectedLang)}">Solicitar diagnóstico técnico</a></div><div class="product-hero-art product-hero-hen" aria-hidden="true"><img src="${image}" alt=""><span>${h(product.egg_color)}</span></div></section><article class="product-content product-content-rich"><section class="product-specs"><div class="product-specs-head"><p class="eyebrow">Dados produtivos</p><h2>Indicadores técnicos da ${h(product.name)}.</h2><p>Informações de referência para análise de potencial produtivo, qualidade de ovos, consumo, peso corporal e viabilidade.</p></div><div class="product-specs-intro">${specs.intro.map(([label, value]) => `<article><span>${h(label)}</span><strong>${h(value)}</strong></article>`).join('')}</div><div class="product-specs-grid">${specs.groups.map(([title, items]) => `<article><h3>${h(title)}</h3><ul>${items.map((item) => `<li>${h(item)}</li>`).join('')}</ul></article>`).join('')}</div></section>${productGuideDownloads(selectedLang)}<p class="eyebrow">Informações da linhagem</p><h2>Para cada manejo, a ave certa.</h2><p>${product.slug.includes('brown') ? 'A LOHMANN BROWN-LITE atende operações orientadas ao mercado de ovos marrons, com foco em persistência, qualidade de casca e ajuste ao sistema produtivo.' : 'A LOHMANN LSL-LITE atende operações orientadas ao mercado de ovos brancos, com foco em uniformidade, eficiência alimentar e manejo previsível.'}</p><p>Indicadores técnicos devem ser interpretados junto ao manejo, clima, ambiência, mercado de destino e acompanhamento de campo.</p><div class="product-pillars"><section><span>01</span><p>Escolha genética orientada por sistema produtivo.</p></section><section><span>02</span><p>Leitura de consumo, viabilidade, persistência e qualidade de ovos.</p></section><section><span>03</span><p>Suporte técnico para calibragem em campo.</p></section></div></article>`, selectedLang);
 
   return `<!doctype html><html lang="${h(langAttr(selectedLang))}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${h(metaTitle)}</title><meta name="description" content="${h(metaDescription)}"><link rel="canonical" href="${h(origin(env, request))}${localizedHref(`/linhagens/${h(product.slug)}`, selectedLang)}"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="/assets/site.css?v=${ASSET_VERSION}">${custom.head}</head><body class="internal-page product-page">${custom.bodyStart}${localizedTopBar(selectedLang)}${localizedHeader('linhagens', selectedLang)}<main>${main}</main>${footerCloud(selectedLang)}<script src="/assets/site.js?v=${ASSET_VERSION}" defer></script>${custom.bodyEnd}</body></html>`;
+}
+
+function productGuideDownloads(selectedLang = 'pt') {
+  const labels = {
+    pt: { eyebrow: 'Guias de manejo', title: 'Acesso rápido aos materiais técnicos', desc: 'Consulte os guias diretamente pela página da linhagem e baixe os arquivos completos quando necessário.', button: 'Baixar guia' },
+    en: { eyebrow: 'Management guides', title: 'Quick access to technical materials', desc: 'Access the guides directly from the strain page and download the complete files when needed.', button: 'Download guide' },
+    es: { eyebrow: 'Guías de manejo', title: 'Acceso rápido a materiales técnicos', desc: 'Consulte las guías directamente desde la página de la línea y descargue los archivos completos cuando sea necesario.', button: 'Descargar guía' },
+  }[selectedLang] || {};
+  const files = [
+    ['PDF', 'Guia de Manejo LSL e BROWN', 'guia-de-manejo-lsl-brown.pdf'],
+    ['PDF', 'Manual Sistemas Alternativos', 'manual-sistemas-alternativos-portugues.pdf'],
+  ];
+  return `<section class="library-downloads product-guides"><header class="section-heading"><div><p class="eyebrow">${h(labels.eyebrow)}</p><h2>${h(labels.title)}</h2></div><p>${h(labels.desc)}</p></header><div class="download-grid">${files.map(([type, title, file]) => `<article class="download-card"><span>${h(type)}</span><h3>${h(title)}</h3><a class="button primary" href="/assets/biblioteca/${h(file)}" download>${h(labels.button)}</a></article>`).join('')}</div></section>`;
 }
 
 function productSpecs(slug) {
@@ -844,6 +810,11 @@ async function adminApp(request, env) {
 }
 
 function adminLoginPage(message = '', status = 200) {
+  const portals = [
+    ['Portal LTZ', 'Acesso ao ambiente principal', 'http://app.ltz.com.br/'],
+    ['Fluig Hy-Line', 'Portal corporativo e processos internos', 'http://fluig.hyline.com.br:8080/portal/p/1/home'],
+    ['LTZ Mobile', 'Acesso mobile ao sistema', 'http://m.app.ltz.com.br/'],
+  ];
   return html(`<!doctype html>
 <html lang="pt-BR">
 <head>
@@ -851,32 +822,52 @@ function adminLoginPage(message = '', status = 200) {
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Administração | Lohmann do Brasil</title>
   <style>
+    *{box-sizing:border-box}
     body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0b0c0e;color:#fff;font-family:Arial,sans-serif;padding:28px}
-    main{width:min(100%,460px);background:#151515;border:1px solid rgba(247,168,23,.32);box-shadow:0 30px 90px rgba(0,0,0,.45);border-radius:24px;padding:34px}
+    .login-layout{width:min(100%,980px);display:grid;grid-template-columns:minmax(320px,460px) minmax(280px,1fr);gap:22px;align-items:stretch}
+    main,.portal-card{background:#151515;border:1px solid rgba(247,168,23,.32);box-shadow:0 30px 90px rgba(0,0,0,.45);border-radius:24px;padding:34px}
     p.kicker{color:#f7a817;font-weight:900;text-transform:uppercase;letter-spacing:.18em;font-size:12px;margin:0 0 18px}
     h1{font-size:36px;line-height:1.05;margin:0 0 14px}
+    h2{font-size:28px;line-height:1.1;margin:0 0 14px}
     p{color:#d8d1c4;line-height:1.6}
     label{display:grid;gap:8px;margin:26px 0 16px;font-weight:800}
     input{border:1px solid rgba(255,255,255,.18);background:#08090b;color:#fff;border-radius:14px;padding:14px;font:600 16px Arial}
     button{width:100%;border:0;border-radius:999px;background:#f7a817;color:#111;font-weight:900;padding:14px 18px;cursor:pointer}
     .alert{background:rgba(247,168,23,.12);border-left:4px solid #f7a817;color:#fff;padding:12px 14px;border-radius:12px;margin:18px 0}
     small{display:block;color:#8f887b;margin-top:18px;line-height:1.55}
+    .portal-list{display:grid;gap:12px;margin-top:24px}
+    .portal-link-card{display:flex;justify-content:space-between;gap:18px;align-items:center;text-decoration:none;color:#fff;border:1px solid rgba(255,255,255,.12);background:#0b0c0e;border-radius:18px;padding:18px;transition:.2s ease}
+    .portal-link-card:hover{border-color:#f7a817;transform:translateY(-2px)}
+    .portal-link-card strong{display:block;color:#fff;font-size:17px;margin-bottom:5px}
+    .portal-link-card span{display:block;color:#aaa;font-size:13px;line-height:1.45}
+    .portal-link-card b{color:#f7a817;font-size:20px}
+    @media (max-width:820px){.login-layout{grid-template-columns:1fr}main,.portal-card{padding:26px}h1{font-size:32px}}
   </style>
 </head>
 <body>
-  <main>
-    <p class="kicker">Administração</p>
-    <h1>Acesso protegido.</h1>
-    <p>Informe o token administrativo configurado no Cloudflare para abrir o painel.</p>
-    ${message ? `<div class="alert">${h(message)}</div>` : ''}
-    <form method="post" action="/admin">
-      <label>Token de acesso
-        <input name="token" type="password" autocomplete="current-password" required autofocus>
-      </label>
-      <button type="submit">Entrar no painel</button>
-    </form>
-    <small>Recomendado: manter também Cloudflare Access protegendo a rota /admin para uma camada extra de segurança.</small>
-  </main>
+  <div class="login-layout">
+    <main>
+      <p class="kicker">Administração</p>
+      <h1>Acesso protegido.</h1>
+      <p>Informe o token administrativo configurado no Cloudflare para abrir o painel.</p>
+      ${message ? `<div class="alert">${h(message)}</div>` : ''}
+      <form method="post" action="/admin">
+        <label>Token de acesso
+          <input name="token" type="password" autocomplete="current-password" required autofocus>
+        </label>
+        <button type="submit">Entrar no painel</button>
+      </form>
+      <small>Recomendado: manter também Cloudflare Access protegendo a rota /admin para uma camada extra de segurança.</small>
+    </main>
+    <aside class="portal-card" aria-label="Acessos rápidos">
+      <p class="kicker">Portais</p>
+      <h2>Acessos rápidos</h2>
+      <p>Links úteis para operação, sistemas internos e consulta mobile.</p>
+      <div class="portal-list">
+        ${portals.map(([title, desc, url]) => `<a class="portal-link-card" href="${h(url)}" target="_blank" rel="noopener"><span><strong>${h(title)}</strong>${h(desc)}</span><b>↗</b></a>`).join('')}
+      </div>
+    </aside>
+  </div>
 </body>
 </html>`, { status, headers: { 'cache-control': 'no-store' } });
 }
@@ -1075,9 +1066,9 @@ function localizedHref(href, selectedLang) {
 
 function navLabel(key, selectedLang) {
   const labels = {
-    pt: { home: 'Início', sobre: 'A Lohmann', linhagens: 'Linhagens', representantes: 'Representantes', suporte: 'Suporte técnico', biblioteca: 'Biblioteca', artigos: 'Artigos', contato: 'Contato', radar: 'Radar Técnico' },
-    en: { home: 'Home', sobre: 'About Lohmann', linhagens: 'Strains', representantes: 'Representatives', suporte: 'Technical Support', biblioteca: 'Library', artigos: 'Articles', contato: 'Contact', radar: 'Technical Radar' },
-    es: { home: 'Inicio', sobre: 'La Lohmann', linhagens: 'Líneas', representantes: 'Representantes', suporte: 'Soporte técnico', biblioteca: 'Biblioteca', artigos: 'Artículos', contato: 'Contacto', radar: 'Radar Técnico' },
+    pt: { home: 'Início', sobre: 'A Lohmann', linhagens: 'Linhagens', representantes: 'Representantes', suporte: 'Suporte técnico', biblioteca: 'Base de Conhecimento', contato: 'Contato', radar: 'Radar de Mercado' },
+    en: { home: 'Home', sobre: 'About Lohmann', linhagens: 'Strains', representantes: 'Representatives', suporte: 'Technical Support', biblioteca: 'Knowledge Base', contato: 'Contact', radar: 'Market Radar' },
+    es: { home: 'Inicio', sobre: 'La Lohmann', linhagens: 'Líneas', representantes: 'Representantes', suporte: 'Soporte técnico', biblioteca: 'Base de Conocimiento', contato: 'Contacto', radar: 'Radar de Mercado' },
   };
   return labels[selectedLang]?.[key] || labels.pt[key] || key;
 }
@@ -1179,7 +1170,6 @@ function translatedCopy(selectedLang) {
     supportText: 'Materials, training and regional service support management routines, indicator reading and decision-making throughout the production cycle.',
     ovoflockTitle: 'Production data and technical routines in one environment.',
     ovoflockText: 'A platform to support flock monitoring, indicators and operational decisions with better organization.',
-    articlesTitle: 'Technical and institutional articles.',
     partnersTitle: 'Relationships that strengthen Lohmann presence in the field.',
     radarTitle: 'Market indicators on a dedicated page.',
     contactTitle: 'Talk to Lohmann do Brasil.',
@@ -1191,8 +1181,7 @@ function translatedCopy(selectedLang) {
     repsPageTitle: 'Find the Lohmann representative for your region.',
     repsPageText: 'Use the interactive map to locate service by state. Click the desired state abbreviation to keep the representative list visible.',
     supportPageTitle: 'Technical support is calibration of the genetic system in the field.',
-    libraryPageTitle: 'Spreadsheets and technical support materials.',
-    articlesPageTitle: 'Technical content for parameter-based decisions.',
+    libraryPageTitle: 'Knowledge Base for technical consultation.',
     radarPageTitle: 'Market indicators for technical decisions.',
   };
   const es = {
@@ -1212,7 +1201,6 @@ function translatedCopy(selectedLang) {
     supportText: 'Materiales, entrenamientos y atención regional apoyan la rutina de manejo, la lectura de indicadores y la toma de decisiones durante el ciclo productivo.',
     ovoflockTitle: 'Datos de producción y rutina técnica en un solo ambiente.',
     ovoflockText: 'Una plataforma para apoyar el seguimiento de lotes, indicadores y decisiones operativas con mayor organización.',
-    articlesTitle: 'Artículos técnicos e institucionales.',
     partnersTitle: 'Relaciones que fortalecen la presencia de Lohmann en el campo.',
     radarTitle: 'Indicadores de mercado en una página dedicada.',
     contactTitle: 'Hable con Lohmann do Brasil.',
@@ -1224,8 +1212,7 @@ function translatedCopy(selectedLang) {
     repsPageTitle: 'Encuentre el representante Lohmann para su región.',
     repsPageText: 'Use el mapa interactivo para localizar la atención por estado. Haga clic en la sigla del estado para fijar la lista de representantes.',
     supportPageTitle: 'El soporte técnico calibra el sistema genético en el campo.',
-    libraryPageTitle: 'Planillas y materiales de apoyo técnico.',
-    articlesPageTitle: 'Contenido técnico para decisiones basadas en parámetros.',
+    libraryPageTitle: 'Base de Conocimiento para consulta técnica.',
     radarPageTitle: 'Indicadores de mercado para decisiones técnicas.',
   };
   return selectedLang === 'es' ? es : en;
@@ -1239,7 +1226,6 @@ function translatedPage(pageKey, productRows, repRows, teamRows, selectedLang) {
   if (pageKey === 'representantes') return translatedReps(repRows, selectedLang, t);
   if (pageKey === 'suporte') return translatedSupport(selectedLang, t);
   if (pageKey === 'biblioteca') return translatedLibrary(selectedLang, t);
-  if (pageKey === 'artigos') return translatedArticles(selectedLang, t);
   if (pageKey === 'radar') return translatedRadar(selectedLang, t);
   return translatedHome(productRows, selectedLang, t);
 }
@@ -1250,14 +1236,15 @@ function translatedProductGrid(productRows, selectedLang, t) {
 }
 
 function translatedHome(productRows, selectedLang, t) {
-  return `<section class="hero" id="inicio"><div class="hero-copy reveal"><div class="live-label"><i></i>${selectedLang === 'es' ? 'Genética como ingeniería de sistema' : 'Genetics as system engineering'}</div><h1>${h(t.heroTitle)}</h1><p>${h(t.heroText)}</p><div class="actions"><a class="button primary" href="${localizedHref('/linhagens', selectedLang)}">${h(t.heroButton)}</a><a class="button ghost" href="#contato">${h(t.talk)}</a></div><div class="signal-row"><span><b>01</b> System</span><span><b>02</b> Management</span><span><b>03</b> Calibration</span></div></div><div class="hero-visual" aria-hidden="true"><div class="egg-photo-layer"></div><div class="tech-grid"></div><div class="scan-line"></div><div class="lohmann-l-motion"><span class="l-mark l-mark-large"></span><span class="l-mark l-mark-medium"></span><span class="l-mark l-mark-small"></span></div></div></section>
+  const isEs = selectedLang === 'es';
+  return `<section class="hero" id="inicio"><div class="hero-copy reveal"><div class="live-label"><i></i>${isEs ? 'Genética como ingeniería de sistema' : 'Genetics as system engineering'}</div><h1>${h(t.heroTitle)}</h1><p>${h(t.heroText)}</p><div class="actions"><a class="button primary" href="${localizedHref('/linhagens', selectedLang)}">${h(t.heroButton)}</a><a class="button ghost" href="#contato">${h(t.talk)}</a></div><div class="signal-row"><span><b>01</b> ${isEs ? 'Sistema' : 'System'}</span><span><b>02</b> ${isEs ? 'Manejo' : 'Management'}</span><span><b>03</b> ${isEs ? 'Calibración' : 'Calibration'}</span></div></div><div class="hero-visual" aria-hidden="true"><div class="egg-photo-layer"></div><div class="tech-grid"></div><div class="scan-line"></div><div class="lohmann-l-motion"><span class="l-mark l-mark-large"></span><span class="l-mark l-mark-medium"></span><span class="l-mark l-mark-small"></span></div></div></section>
   <section class="intro section"><div><p class="eyebrow">Lohmann do Brasil</p><h2>${h(t.aboutTitle)}</h2></div><div><p>${h(t.aboutText)}</p><a class="text-link" href="${localizedHref('/a-lohmann', selectedLang)}">${h(t.aboutMore)} <span>+</span></a></div></section>
   ${translatedProductGrid(productRows, selectedLang, t)}
-  <section class="technical" id="tecnico"><div class="technical-copy reveal"><p class="eyebrow light">${navLabel('suporte', selectedLang)}</p><h2>${h(t.supportTitle)}</h2><p>${h(t.supportText)}</p><a class="button light" href="${localizedHref('/suporte-tecnico', selectedLang)}">${selectedLang === 'es' ? 'Saber más' : 'Learn more'}</a></div><div class="technical-list"><article><span>01</span><h3>${selectedLang === 'es' ? 'Documentos técnicos' : 'Technical documents'}</h3><p>${selectedLang === 'es' ? 'Guías y materiales para estandarizar la lectura técnica.' : 'Guides and materials to standardize technical reading.'}</p></article><article><span>02</span><h3>${selectedLang === 'es' ? 'Entrenamientos' : 'Training'}</h3><p>${selectedLang === 'es' ? 'Contenido organizado por sistema, etapa productiva y objetivo.' : 'Content organized by system, production stage and goal.'}</p></article><article><span>03</span><h3>${selectedLang === 'es' ? 'Gestión de manejo' : 'Management control'}</h3><p>${selectedLang === 'es' ? 'Tools para acompañar lotes e interpretar desvíos.' : 'Tools to monitor flocks and interpret deviations.'}</p></article></div></section>
+  <section class="technical" id="tecnico"><div class="technical-copy reveal"><p class="eyebrow light">${navLabel('suporte', selectedLang)}</p><h2>${h(t.supportTitle)}</h2><p>${h(t.supportText)}</p><a class="button light" href="${localizedHref('/suporte-tecnico', selectedLang)}">${isEs ? 'Saber más' : 'Learn more'}</a></div><div class="technical-list"><article><span>01</span><h3>${isEs ? 'Documentos técnicos' : 'Technical documents'}</h3><p>${isEs ? 'Guías y materiales para estandarizar la lectura técnica.' : 'Guides and materials to standardize technical reading.'}</p></article><article><span>02</span><h3>${isEs ? 'Entrenamientos' : 'Training'}</h3><p>${isEs ? 'Contenido organizado por sistema, etapa productiva y objetivo.' : 'Content organized by system, production stage and goal.'}</p></article><article><span>03</span><h3>${isEs ? 'Gestión de manejo' : 'Management control'}</h3><p>${isEs ? 'Herramientas para acompañar lotes e interpretar desvíos.' : 'Tools to monitor flocks and interpret deviations.'}</p></article></div></section>
   <section class="representatives-shortcut section"><div class="shortcut-copy reveal"><p class="eyebrow">${navLabel('representantes', selectedLang)}</p><h2>${h(t.repsTitle)}</h2><p>${h(t.repsText)}</p><a class="button primary" href="${localizedHref('/representantes', selectedLang)}">${h(t.repsButton)}</a></div><div class="shortcut-image reveal" aria-hidden="true"><img src="/assets/representantes-atalho.png" alt=""></div></section>
   <section class="innovation"><div class="innovation-visual" aria-hidden="true"><div class="analysis-egg"><span></span><i></i></div><div class="radar"></div></div><div class="innovation-copy reveal"><p class="eyebrow">Ovoflock</p><h2>${h(t.ovoflockTitle)}</h2><p>${h(t.ovoflockText)}</p><a class="button primary" href="https://ovoflock.com/login" target="_blank" rel="noopener">Ovoflock</a></div></section>
-  <section class="partners-section section"><header class="section-heading"><div><p class="eyebrow">${selectedLang === 'es' ? 'Socios' : 'Partners'}</p><h2>${h(t.partnersTitle)}</h2></div></header><div class="partners-grid"><article class="partner-card reveal"><img src="/assets/logo-parceiro-tangara.png?v=${ASSET_VERSION}" alt="Tangará"></article><article class="partner-card reveal"><img src="/assets/logo-parceiro-ovos-sousa.png?v=${ASSET_VERSION}" alt="Ovos Sousa"></article></div></section>
-  <section class="technical-radar radar-shortcut section"><header class="section-heading"><div><p class="eyebrow"><span class="live-dot"></span>${navLabel('radar', selectedLang)}</p><h2>${h(t.radarTitle)}</h2></div></header><a class="button primary" href="${localizedHref('/radar-tecnico', selectedLang)}">${selectedLang === 'es' ? 'Abrir Radar Técnico' : 'Open Technical Radar'}</a></section>
+  <section class="partners-section section"><header class="section-heading"><div><p class="eyebrow">${isEs ? 'Socios' : 'Partners'}</p><h2>${h(t.partnersTitle)}</h2></div></header><div class="partners-grid"><article class="partner-card reveal"><img src="/assets/logo-parceiro-tangara.png?v=${ASSET_VERSION}" alt="Tangará"></article><article class="partner-card reveal"><img src="/assets/logo-parceiro-ovos-sousa.png?v=${ASSET_VERSION}" alt="Ovos Sousa"></article></div></section>
+  <section class="technical-radar radar-shortcut section"><header class="section-heading"><div><p class="eyebrow"><span class="live-dot"></span>${navLabel('radar', selectedLang)}</p><h2>${h(t.radarTitle)}</h2></div></header><a class="button primary" href="${localizedHref('/radar-tecnico', selectedLang)}">${isEs ? 'Abrir Radar de Mercado' : 'Open Market Radar'}</a></section>
   ${translatedContact(selectedLang, t)}`;
 }
 
@@ -1282,16 +1269,6 @@ function translatedLibrary(selectedLang, t) {
   return `<section class="internal-hero"><p class="eyebrow">${navLabel('biblioteca', selectedLang)}</p><h1>${h(t.libraryPageTitle)}</h1><p>${selectedLang === 'es' ? 'La biblioteca organiza archivos de consulta para seguimiento de lotes, indicadores y rutina de manejo.' : 'The library organizes reference files for flock monitoring, indicator reading and management routines.'}</p></section><section class="content-bands content-bands-rich library-page"><div class="content-grid"><article class="content-card"><span>01</span><h2>${selectedLang === 'es' ? 'Planillas de seguimiento de lote' : 'Flock monitoring spreadsheets'}</h2><p>${selectedLang === 'es' ? 'Modelos para organizar producción, consumo, mortalidad, peso de huevos y rutina técnica.' : 'Templates to organize production, feed intake, mortality, egg weight and technical routine.'}</p></article><article class="content-card"><span>02</span><h2>${selectedLang === 'es' ? 'Control de producción e indicadores' : 'Production and indicator control'}</h2><p>${selectedLang === 'es' ? 'Materiales de apoyo para registrar datos operativos.' : 'Support materials to record operational data.'}</p></article></div>${libraryDownloads(selectedLang)}</section>`;
 }
 
-function translatedArticles(selectedLang, t) {
-  const label = selectedLang === 'es' ? 'Artículo modelo' : 'Sample article';
-  const title = selectedLang === 'es' ? 'Cómo se mostrará un artículo en el sitio' : 'How an article will be displayed on the site';
-  const desc = selectedLang === 'es'
-    ? 'Modelo temporal para evaluar título, resumen, categoría y llamada para lectura completa.'
-    : 'Temporary model to review title, summary, category and the call to read the full article.';
-  const button = selectedLang === 'es' ? 'Ver formato' : 'View format';
-  return `<section class="internal-hero"><p class="eyebrow">${navLabel('artigos', selectedLang)}</p><h1>${h(t.articlesPageTitle)}</h1><p>${selectedLang === 'es' ? 'Esta área mostrará publicaciones de Lohmann do Brasil. Por ahora, mantenemos solo un artículo modelo para validar el formato.' : 'This area will display Lohmann do Brasil publications. For now, it keeps only one sample article to validate the format.'}</p></section><section class="content-bands content-bands-rich article-list-section"><article class="article-card reveal"><span>${h(label)}</span><h2>${h(title)}</h2><p>${h(desc)}</p><div class="article-meta"><small>${selectedLang === 'es' ? 'Categoría técnica' : 'Technical category'}</small><small>${selectedLang === 'es' ? '5 min de lectura' : '5 min read'}</small></div><a class="button primary" href="${localizedHref('/artigos/artigo-exemplo', selectedLang)}">${h(button)}</a></article></section>`;
-}
-
 function libraryDownloads(selectedLang = 'pt') {
   const labels = {
     pt: { eyebrow: 'Arquivos disponíveis', title: 'Materiais para download', desc: 'Baixe PDFs e planilhas de gestão de lote para LOHMANN LSL-LITE e LOHMANN BROWN-LITE.', button: 'Baixar arquivo' },
@@ -1299,6 +1276,8 @@ function libraryDownloads(selectedLang = 'pt') {
     es: { eyebrow: 'Archivos disponibles', title: 'Materiales para descarga', desc: 'Descargue PDFs y planillas de gestión de lote para LOHMANN LSL-LITE y LOHMANN BROWN-LITE.', button: 'Descargar archivo' },
   }[selectedLang] || {};
   const files = [
+    ['PDF', 'Guia de Manejo LSL e BROWN', 'guia-de-manejo-lsl-brown.pdf'],
+    ['PDF', 'Manual Sistemas Alternativos', 'manual-sistemas-alternativos-portugues.pdf'],
     ['PDF', 'Gestão de Lote BROWN-LITE', 'gestao-lote-brown-lite.pdf'],
     ['PDF', 'Gestão de Lote LSL-LITE', 'gestao-lote-lsl-lite.pdf'],
     ['XLSX', 'Gestão de Lote Diário Max e Min - LOHMANN BROWN', 'gestao-diaria-brown-ovos-1-galpao.xlsx'],
@@ -1310,7 +1289,7 @@ function libraryDownloads(selectedLang = 'pt') {
 }
 
 function translatedRadar(selectedLang, t) {
-  return `<section class="internal-hero radar-page-hero"><p class="eyebrow"><span class="live-dot"></span>${navLabel('radar', selectedLang)}</p><h1>${h(t.radarPageTitle)}</h1><p>${selectedLang === 'es' ? 'Acompañe referencias de precio para huevos en plazas brasileñas y use los datos como apoyo técnico y comercial.' : 'Follow egg price references in Brazilian markets and use the data as technical and commercial support.'}</p></section><section class="technical-radar section radar-page"><div class="radar-dashboard"><aside class="radar-insights"><p class="eyebrow">${selectedLang === 'es' ? 'Lectura técnica' : 'Technical reading'}</p><h2>${selectedLang === 'es' ? 'El precio es contexto. La decisión depende del sistema.' : 'Price is context. Decision depends on the system.'}</h2><p>${selectedLang === 'es' ? 'El Radar Técnico fue pensado como punto de consulta para productores, granjas y distribuidores.' : 'Technical Radar was designed as a reference point for producers, farms and distributors.'}</p></aside><div class="cepea-widget-card"><script type="text/javascript" src="https://cepea.org.br/br/widgetproduto.js.php?fonte=arial&tamanho=10&largura=100%25&corfundo=242424&cortexto=ffffff&corlinha=f78e05&id_indicador%5B%5D=159-Bastos+(SP)+-+FOB-branco&id_indicador%5B%5D=159-Grande+BH+-+(MG)+-+CIF-branco&id_indicador%5B%5D=159-Grande+SP+(SP)+-+CIF-branco&id_indicador%5B%5D=159-Recife+(PE)+-+CIF-branco&id_indicador%5B%5D=159-S.+M.+de+Jetib%C3%A1+(ES)+-+FOB-branco&id_indicador%5B%5D=159-Bastos+(SP)+-+FOB-vermelho&id_indicador%5B%5D=159-Grande+BH+-+(MG)+-+CIF-vermelho&id_indicador%5B%5D=159-Grande+SP+(SP)+-+CIF-vermelho&id_indicador%5B%5D=159-Recife+(PE)+-+CIF-vermelho&id_indicador%5B%5D=159-S.+M.+de+Jetib%C3%A1+(ES)+-+FOB-vermelho&id_indicador%5B%5D=12&id_indicador%5B%5D=92"></script></div></div></section>`;
+  return `<section class="internal-hero radar-page-hero"><p class="eyebrow"><span class="live-dot"></span>${navLabel('radar', selectedLang)}</p><h1>${h(t.radarPageTitle)}</h1><p>${selectedLang === 'es' ? 'Acompañe referencias de precio para huevos en plazas brasileñas y use los datos como apoyo técnico y comercial.' : 'Follow egg price references in Brazilian markets and use the data as technical and commercial support.'}</p></section><section class="technical-radar section radar-page"><div class="radar-dashboard"><aside class="radar-insights"><p class="eyebrow">${selectedLang === 'es' ? 'Lectura técnica' : 'Technical reading'}</p><h2>${selectedLang === 'es' ? 'El precio es contexto. La decisión depende del sistema.' : 'Price is context. Decision depends on the system.'}</h2><p>${selectedLang === 'es' ? 'El Radar de Mercado fue pensado como punto de consulta para productores, granjas y distribuidores.' : 'Technical Radar was designed as a reference point for producers, farms and distributors.'}</p></aside><div class="cepea-widget-card"><script type="text/javascript" src="https://cepea.org.br/br/widgetproduto.js.php?fonte=arial&tamanho=10&largura=100%25&corfundo=242424&cortexto=ffffff&corlinha=f78e05&id_indicador%5B%5D=159-Bastos+(SP)+-+FOB-branco&id_indicador%5B%5D=159-Grande+BH+-+(MG)+-+CIF-branco&id_indicador%5B%5D=159-Grande+SP+(SP)+-+CIF-branco&id_indicador%5B%5D=159-Recife+(PE)+-+CIF-branco&id_indicador%5B%5D=159-S.+M.+de+Jetib%C3%A1+(ES)+-+FOB-branco&id_indicador%5B%5D=159-Bastos+(SP)+-+FOB-vermelho&id_indicador%5B%5D=159-Grande+BH+-+(MG)+-+CIF-vermelho&id_indicador%5B%5D=159-Grande+SP+(SP)+-+CIF-vermelho&id_indicador%5B%5D=159-Recife+(PE)+-+CIF-vermelho&id_indicador%5B%5D=159-S.+M.+de+Jetib%C3%A1+(ES)+-+FOB-vermelho&id_indicador%5B%5D=12&id_indicador%5B%5D=92"></script></div></div></section>`;
 }
 
 function translatedContact(selectedLang, t) {
@@ -1325,8 +1304,7 @@ function localizedHeader(active, selectedLang = 'pt') {
     ['/linhagens', navLabel('linhagens', selectedLang), 'linhagens'],
     ['/representantes', navLabel('representantes', selectedLang), 'representantes'],
     ['/suporte-tecnico', navLabel('suporte', selectedLang), 'suporte'],
-    ['/biblioteca', navLabel('biblioteca', selectedLang), 'biblioteca'],
-    ['/artigos', navLabel('artigos', selectedLang), 'artigos'],
+    ['/base-de-conhecimento', navLabel('biblioteca', selectedLang), 'biblioteca'],
     ['/#contato', navLabel('contato', selectedLang), 'contato'],
     ['/radar-tecnico', `<span></span>${navLabel('radar', selectedLang)}`, 'radar'],
   ].map(([href, label, key]) => `<a class="${key === active ? 'active' : ''} ${key === 'radar' ? 'radar-nav-link' : ''}" href="${localizedHref(href, selectedLang)}">${label}</a>`).join('');
