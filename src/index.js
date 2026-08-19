@@ -1,5 +1,5 @@
 const LANGS = new Set(['pt', 'en', 'es']);
-const ASSET_VERSION = '20260819-knowledge-base';
+const ASSET_VERSION = '20260819-guides-v2';
 
 const ROUTES = {
   '/': 'home',
@@ -563,7 +563,28 @@ function home(productRows, sections = {}) {
 
 function productGrid(productRows) {
   const rows = productRows.length ? productRows : fallbackProducts();
-  return `<section class="products section" id="linhagens"><header class="section-heading"><div><p class="eyebrow">Portfólio Lohmann</p><h2>Linhagens calibradas por manejo, clima e mercado.</h2></div></header><div class="product-grid">${rows.map((product, index) => `<article class="product-card reveal"><div class="product-art product-art-${index + 1}"><span>0${index + 1}</span><img class="product-hen official-hen" src="/assets/${product.slug.includes('brown') ? 'galinha-marron-oficial-lohmann.png' : 'galinha-branca-oficial-lohmann.png'}" alt="${h(product.name)}"></div><div class="product-copy"><small>${h(product.egg_color)}</small><h3>${h(product.name)}</h3><p>${h(product.summary)}</p><a href="/linhagens/${h(product.slug)}">Ver detalhes <b>+</b></a></div></article>`).join('')}</div></section>`;
+  return `<section class="products section" id="linhagens"><header class="section-heading"><div><p class="eyebrow">Portfólio Lohmann</p><h2>Linhagens calibradas por manejo, clima e mercado.</h2></div></header><div class="product-grid">${rows.map((product, index) => `<article class="product-card reveal"><div class="product-art product-art-${index + 1}"><span>0${index + 1}</span><img class="product-hen official-hen" src="/assets/${product.slug.includes('brown') ? 'galinha-marron-oficial-lohmann.png' : 'galinha-branca-oficial-lohmann.png'}" alt="${h(product.name)}"></div><div class="product-copy"><small>${h(product.egg_color)}</small><h3>${h(product.name)}</h3><p>${h(product.summary)}</p><a href="/linhagens/${h(product.slug)}">Ver detalhes <b>+</b></a>${productGuideLinks(product.slug, 'pt')}</div></article>`).join('')}</div></section>`;
+}
+
+function productGuideLinks(slug, selectedLang = 'pt') {
+  const labels = {
+    pt: { title: 'Guias de manejo', open: 'Baixar' },
+    en: { title: 'Management guides', open: 'Download' },
+    es: { title: 'Guías de manejo', open: 'Descargar' },
+  }[selectedLang] || {};
+  return `<div class="product-card-guides"><strong>${h(labels.title)}</strong>${productGuideFiles(slug).map((file) => `<a href="/assets/biblioteca/${h(file.file)}" download>${h(file.shortTitle || file.title)} <span>${h(labels.open)}</span></a>`).join('')}</div>`;
+}
+
+function productGuideFiles(slug = '') {
+  const isBrown = String(slug).includes('brown');
+  const specific = isBrown
+    ? { title: 'Gestão de Lote BROWN-LITE', shortTitle: 'Guia BROWN-LITE', file: 'gestao-lote-brown-lite.pdf' }
+    : { title: 'Gestão de Lote LSL-LITE', shortTitle: 'Guia LSL-LITE', file: 'gestao-lote-lsl-lite.pdf' };
+  return [
+    specific,
+    { title: 'Guia de Manejo LSL e BROWN', shortTitle: 'Guia LSL e BROWN', file: 'guia-de-manejo-lsl-brown.pdf' },
+    { title: 'Manual Sistemas Alternativos', shortTitle: 'Sistemas Alternativos', file: 'manual-sistemas-alternativos-portugues.pdf' },
+  ];
 }
 
 function fallbackProducts(selectedLang = 'pt') {
@@ -671,22 +692,19 @@ async function renderProductPage(slug, request, env) {
   const metaTitle = `${product.name} | Lohmann do Brasil`;
   const metaDescription = product.summary || (selectedLang === 'es' ? 'Línea Lohmann para sistemas comerciales de postura.' : selectedLang === 'en' ? 'Lohmann strain for commercial layer systems.' : 'Linhagem Lohmann para sistemas de postura comercial.');
 
-  const main = translateStatic(`<section class="product-hero"><div class="product-hero-copy"><a class="back" href="${localizedHref('/linhagens', selectedLang)}">Voltar</a><p class="eyebrow">Linhagem | ${h(product.egg_color)}</p><h1>${h(product.name)}</h1><p>${h(product.summary)}</p><a class="button primary" href="${localizedHref('/#contato', selectedLang)}">Solicitar diagnóstico técnico</a></div><div class="product-hero-art product-hero-hen" aria-hidden="true"><img src="${image}" alt=""><span>${h(product.egg_color)}</span></div></section><article class="product-content product-content-rich"><section class="product-specs"><div class="product-specs-head"><p class="eyebrow">Dados produtivos</p><h2>Indicadores técnicos da ${h(product.name)}.</h2><p>Informações de referência para análise de potencial produtivo, qualidade de ovos, consumo, peso corporal e viabilidade.</p></div><div class="product-specs-intro">${specs.intro.map(([label, value]) => `<article><span>${h(label)}</span><strong>${h(value)}</strong></article>`).join('')}</div><div class="product-specs-grid">${specs.groups.map(([title, items]) => `<article><h3>${h(title)}</h3><ul>${items.map((item) => `<li>${h(item)}</li>`).join('')}</ul></article>`).join('')}</div></section>${productGuideDownloads(selectedLang)}<p class="eyebrow">Informações da linhagem</p><h2>Para cada manejo, a ave certa.</h2><p>${product.slug.includes('brown') ? 'A LOHMANN BROWN-LITE atende operações orientadas ao mercado de ovos marrons, com foco em persistência, qualidade de casca e ajuste ao sistema produtivo.' : 'A LOHMANN LSL-LITE atende operações orientadas ao mercado de ovos brancos, com foco em uniformidade, eficiência alimentar e manejo previsível.'}</p><p>Indicadores técnicos devem ser interpretados junto ao manejo, clima, ambiência, mercado de destino e acompanhamento de campo.</p><div class="product-pillars"><section><span>01</span><p>Escolha genética orientada por sistema produtivo.</p></section><section><span>02</span><p>Leitura de consumo, viabilidade, persistência e qualidade de ovos.</p></section><section><span>03</span><p>Suporte técnico para calibragem em campo.</p></section></div></article>`, selectedLang);
+  const main = translateStatic(`<section class="product-hero"><div class="product-hero-copy"><a class="back" href="${localizedHref('/linhagens', selectedLang)}">Voltar</a><p class="eyebrow">Linhagem | ${h(product.egg_color)}</p><h1>${h(product.name)}</h1><p>${h(product.summary)}</p><a class="button primary" href="${localizedHref('/#contato', selectedLang)}">Solicitar diagnóstico técnico</a></div><div class="product-hero-art product-hero-hen" aria-hidden="true"><img src="${image}" alt=""><span>${h(product.egg_color)}</span></div></section><article class="product-content product-content-rich"><section class="product-specs"><div class="product-specs-head"><p class="eyebrow">Dados produtivos</p><h2>Indicadores técnicos da ${h(product.name)}.</h2><p>Informações de referência para análise de potencial produtivo, qualidade de ovos, consumo, peso corporal e viabilidade.</p></div><div class="product-specs-intro">${specs.intro.map(([label, value]) => `<article><span>${h(label)}</span><strong>${h(value)}</strong></article>`).join('')}</div><div class="product-specs-grid">${specs.groups.map(([title, items]) => `<article><h3>${h(title)}</h3><ul>${items.map((item) => `<li>${h(item)}</li>`).join('')}</ul></article>`).join('')}</div></section>${productGuideDownloads(product.slug, selectedLang)}<p class="eyebrow">Informações da linhagem</p><h2>Para cada manejo, a ave certa.</h2><p>${product.slug.includes('brown') ? 'A LOHMANN BROWN-LITE atende operações orientadas ao mercado de ovos marrons, com foco em persistência, qualidade de casca e ajuste ao sistema produtivo.' : 'A LOHMANN LSL-LITE atende operações orientadas ao mercado de ovos brancos, com foco em uniformidade, eficiência alimentar e manejo previsível.'}</p><p>Indicadores técnicos devem ser interpretados junto ao manejo, clima, ambiência, mercado de destino e acompanhamento de campo.</p><div class="product-pillars"><section><span>01</span><p>Escolha genética orientada por sistema produtivo.</p></section><section><span>02</span><p>Leitura de consumo, viabilidade, persistência e qualidade de ovos.</p></section><section><span>03</span><p>Suporte técnico para calibragem em campo.</p></section></div></article>`, selectedLang);
 
   return `<!doctype html><html lang="${h(langAttr(selectedLang))}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${h(metaTitle)}</title><meta name="description" content="${h(metaDescription)}"><link rel="canonical" href="${h(origin(env, request))}${localizedHref(`/linhagens/${h(product.slug)}`, selectedLang)}"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="/assets/site.css?v=${ASSET_VERSION}">${custom.head}</head><body class="internal-page product-page">${custom.bodyStart}${localizedTopBar(selectedLang)}${localizedHeader('linhagens', selectedLang)}<main>${main}</main>${footerCloud(selectedLang)}<script src="/assets/site.js?v=${ASSET_VERSION}" defer></script>${custom.bodyEnd}</body></html>`;
 }
 
-function productGuideDownloads(selectedLang = 'pt') {
+function productGuideDownloads(slug = '', selectedLang = 'pt') {
   const labels = {
-    pt: { eyebrow: 'Guias de manejo', title: 'Acesso rápido aos materiais técnicos', desc: 'Consulte os guias diretamente pela página da linhagem e baixe os arquivos completos quando necessário.', button: 'Baixar guia' },
-    en: { eyebrow: 'Management guides', title: 'Quick access to technical materials', desc: 'Access the guides directly from the strain page and download the complete files when needed.', button: 'Download guide' },
-    es: { eyebrow: 'Guías de manejo', title: 'Acceso rápido a materiales técnicos', desc: 'Consulte las guías directamente desde la página de la línea y descargue los archivos completos cuando sea necesario.', button: 'Descargar guía' },
+    pt: { eyebrow: 'Guias de manejo', title: 'Acesso rápido aos materiais técnicos', desc: 'Os arquivos abaixo foram correlacionados com a linhagem selecionada. Materiais gerais aparecem em ambas as linhagens.', button: 'Baixar guia' },
+    en: { eyebrow: 'Management guides', title: 'Quick access to technical materials', desc: 'The files below are matched to the selected strain. General materials appear on both strain pages.', button: 'Download guide' },
+    es: { eyebrow: 'Guías de manejo', title: 'Acceso rápido a materiales técnicos', desc: 'Los archivos abajo están relacionados con la línea seleccionada. Los materiales generales aparecen en ambas líneas.', button: 'Descargar guía' },
   }[selectedLang] || {};
-  const files = [
-    ['PDF', 'Guia de Manejo LSL e BROWN', 'guia-de-manejo-lsl-brown.pdf'],
-    ['PDF', 'Manual Sistemas Alternativos', 'manual-sistemas-alternativos-portugues.pdf'],
-  ];
-  return `<section class="library-downloads product-guides"><header class="section-heading"><div><p class="eyebrow">${h(labels.eyebrow)}</p><h2>${h(labels.title)}</h2></div><p>${h(labels.desc)}</p></header><div class="download-grid">${files.map(([type, title, file]) => `<article class="download-card"><span>${h(type)}</span><h3>${h(title)}</h3><a class="button primary" href="/assets/biblioteca/${h(file)}" download>${h(labels.button)}</a></article>`).join('')}</div></section>`;
+  const files = productGuideFiles(slug);
+  return `<section class="library-downloads product-guides"><div class="product-guides-inner"><header class="section-heading"><div><p class="eyebrow">${h(labels.eyebrow)}</p><h2>${h(labels.title)}</h2></div><p>${h(labels.desc)}</p></header><div class="download-grid">${files.map((file) => `<article class="download-card"><span>PDF</span><h3>${h(file.title)}</h3><a class="button primary" href="/assets/biblioteca/${h(file.file)}" download>${h(labels.button)}</a></article>`).join('')}</div></div></section>`;
 }
 
 function productSpecs(slug) {
@@ -1232,7 +1250,7 @@ function translatedPage(pageKey, productRows, repRows, teamRows, selectedLang) {
 
 function translatedProductGrid(productRows, selectedLang, t) {
   const rows = productRows.length ? productRows : fallbackProducts(selectedLang);
-  return `<section class="products section" id="linhagens"><header class="section-heading"><div><p class="eyebrow">${h(t.strainsKicker)}</p><h2>${h(t.strainsTitle)}</h2></div></header><div class="product-grid">${rows.map((product, index) => `<article class="product-card reveal"><div class="product-art product-art-${index + 1}"><span>0${index + 1}</span><img class="product-hen official-hen" src="/assets/${product.slug.includes('brown') ? 'galinha-marron-oficial-lohmann.png' : 'galinha-branca-oficial-lohmann.png'}" alt="${h(product.name)}"></div><div class="product-copy"><small>${h(product.egg_color)}</small><h3>${h(product.name)}</h3><p>${h(product.summary)}</p><a href="${localizedHref(`/linhagens/${h(product.slug)}`, selectedLang)}">${selectedLang === 'es' ? 'Ver detalles' : 'View details'} <b>+</b></a></div></article>`).join('')}</div></section>`;
+  return `<section class="products section" id="linhagens"><header class="section-heading"><div><p class="eyebrow">${h(t.strainsKicker)}</p><h2>${h(t.strainsTitle)}</h2></div></header><div class="product-grid">${rows.map((product, index) => `<article class="product-card reveal"><div class="product-art product-art-${index + 1}"><span>0${index + 1}</span><img class="product-hen official-hen" src="/assets/${product.slug.includes('brown') ? 'galinha-marron-oficial-lohmann.png' : 'galinha-branca-oficial-lohmann.png'}" alt="${h(product.name)}"></div><div class="product-copy"><small>${h(product.egg_color)}</small><h3>${h(product.name)}</h3><p>${h(product.summary)}</p><a href="${localizedHref(`/linhagens/${h(product.slug)}`, selectedLang)}">${selectedLang === 'es' ? 'Ver detalles' : 'View details'} <b>+</b></a>${productGuideLinks(product.slug, selectedLang)}</div></article>`).join('')}</div></section>`;
 }
 
 function translatedHome(productRows, selectedLang, t) {
