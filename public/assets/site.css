@@ -859,6 +859,13 @@ input,textarea,select,button{max-width:100%}
 .product-specs-head .eyebrow{margin-bottom:12px}
 .product-specs-head h2{max-width:760px;margin-bottom:14px}
 .product-specs-head p:not(.eyebrow){max-width:760px}
+.product-page .product-content{max-width:none;width:100%;padding-left:0!important;padding-right:0!important}
+.product-page .product-content-rich>.product-specs{width:100vw;max-width:none;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);border-radius:0;background:#0b0c0e;padding-left:max(var(--page-gutter),calc((100vw - 1120px)/2));padding-right:max(var(--page-gutter),calc((100vw - 1120px)/2))}
+.product-page .product-content-rich>.product-specs>*{max-width:1120px;margin-left:auto;margin-right:auto}
+.product-page .product-content-rich>.eyebrow,
+.product-page .product-content-rich>h2,
+.product-page .product-content-rich>p,
+.product-page .product-content-rich>.product-pillars{width:min(1120px,calc(100% - (var(--page-gutter) * 2)));margin-left:auto;margin-right:auto}
 
 /* Cepea widget readability refinement */
 .cepea-widget-card{display:flex;justify-content:center;align-items:flex-start;background:linear-gradient(135deg,#f78e05 0 10px,#242424 10px 100%);border-color:rgba(247,142,5,.7);padding:28px;box-shadow:0 28px 80px rgba(0,0,0,.45),inset 0 0 0 1px rgba(255,255,255,.06)}
