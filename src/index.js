@@ -1,5 +1,5 @@
 const LANGS = new Set(['pt', 'en', 'es']);
-const ASSET_VERSION = '20260821-radar-article';
+const ASSET_VERSION = '20260821-articles-flags';
 
 const ROUTES = {
   '/': 'home',
@@ -8,6 +8,8 @@ const ROUTES = {
   '/representantes': 'representantes',
   '/suporte-tecnico': 'suporte',
   '/base-de-conhecimento': 'biblioteca',
+  '/base-de-conhecimento/genetica-que-se-confirma-no-campo': 'artigoLohmann142',
+  '/artigos/genetica-que-se-confirma-no-campo': 'artigoLohmann142',
   '/radar-tecnico': 'radar',
 };
 
@@ -20,7 +22,7 @@ const LEGACY_REDIRECTS = {
   '/biblioteca': '/base-de-conhecimento',
   '/biblioteca.php': '/base-de-conhecimento',
   '/artigos': '/base-de-conhecimento',
-  '/artigos/artigo-exemplo': '/base-de-conhecimento',
+  '/artigos/artigo-exemplo': '/base-de-conhecimento/genetica-que-se-confirma-no-campo',
   '/noticias.php': '/base-de-conhecimento',
   '/radar-tecnico.php': '/radar-tecnico',
 };
@@ -53,6 +55,10 @@ const pageFallback = {
   radar: {
     title: 'Radar de Mercado | Lohmann do Brasil',
     description: 'Indicadores de mercado para apoio à leitura técnica do setor avícola.',
+  },
+  artigoLohmann142: {
+    title: 'Genética que se confirma no campo | Lohmann do Brasil',
+    description: 'Artigo sobre os resultados de clientes Lohmann do Brasil destacados na edição 142 da revista A Hora do Ovo.',
   },
 };
 
@@ -494,6 +500,7 @@ function footer() {
 }
 
 function renderMain(pageKey, productRows, repRows, teamRows, sections = {}, selectedLang = 'pt') {
+  if (pageKey === 'artigoLohmann142') return articleLohmann142Page();
   if (selectedLang !== 'pt') return translatedPage(pageKey, productRows, repRows, teamRows, selectedLang);
   if (pageKey === 'home') return translateStatic(homeCloud(productRows, sections), selectedLang);
   if (pageKey === 'sobre') return translateStatic(sobre(teamRows, sections), selectedLang);
@@ -656,7 +663,7 @@ function marketReportBlock(selectedLang = 'pt') {
     es: { eyebrow: 'Informe mensual', title: 'Plantel brasileño de ponedoras', text: 'Consulte el material de apoyo con datos de alojamiento, plantel nacional y evolución de indicadores. El archivo completo está disponible para descarga.', button: 'Descargar informe en PDF', iframe: 'Vista previa del informe mensual' },
   }[selectedLang] || {};
   const pdf = '/assets/biblioteca/relatorio-mensal-plantel-poedeiras.pdf';
-  return `<section class="market-report-section"><div class="market-report-copy"><p class="eyebrow">${h(labels.eyebrow)}</p><h2>${h(labels.title)}</h2><p>${h(labels.text)}</p><a class="button primary" href="${pdf}" download>${h(labels.button)}</a></div><div class="market-report-viewer"><img src="/assets/radar-report-mensal.png?v=${ASSET_VERSION}" alt="Relatório mensal do plantel brasileiro de poedeiras"><iframe src="${pdf}#toolbar=1&navpanes=0" title="${h(labels.iframe)}" loading="lazy"></iframe></div></section>`;
+  return `<section class="market-report-section"><div class="market-report-copy"><p class="eyebrow">${h(labels.eyebrow)}</p><h2>${h(labels.title)}</h2><p>${h(labels.text)}</p><a class="button primary" href="${pdf}" download>${h(labels.button)}</a></div><div class="market-report-viewer market-report-image-only"><img src="/assets/radar-report-mensal.png?v=${ASSET_VERSION}" alt="Relatório mensal do plantel brasileiro de poedeiras"></div></section>`;
 }
 function simplePage(title, description) {
   if (title === 'Suporte técnico') return suportePage();
@@ -678,13 +685,7 @@ function suportePage() {
 }
 
 function bibliotecaPage() {
-  const items = [
-    ['01', 'Planilhas de acompanhamento de lote', 'Modelos para organizar dados de produção, consumo, mortalidade, peso de ovos e rotina de leitura técnica.'],
-    ['02', 'Guias de manejo', 'Materiais oficiais para consulta técnica de recria, produção, ambiência e sistemas alternativos.'],
-    ['03', 'Artigos e conteúdo técnico', 'Publicações institucionais e textos de apoio passam a ficar centralizados nesta base para facilitar a consulta.'],
-    ['04', 'Controle de produção e indicadores', 'Arquivos voltados à padronização de registros, histórico de lotes e acompanhamento em campo.'],
-  ];
-  return `<section class="internal-hero"><p class="eyebrow">Base de Conhecimento</p><h1>Materiais técnicos, guias e conteúdos para consulta.</h1><p>A Base de Conhecimento organiza arquivos de manejo, planilhas de acompanhamento e conteúdos técnicos em um único ambiente de apoio à rotina produtiva.</p></section><section class="content-bands content-bands-rich library-page"><div class="content-grid">${items.map(([n, title, text]) => `<article class="content-card"><span>${n}</span><h2>${title}</h2><p>${text}</p></article>`).join('')}</div>${knowledgeArticle('pt')}${libraryDownloads('pt')}</section>`;
+  return `<section class="internal-hero"><p class="eyebrow">Base de Conhecimento</p><h1>Materiais técnicos, guias e conteúdos para consulta.</h1><p>A Base de Conhecimento organiza arquivos de manejo, planilhas de acompanhamento e conteúdos técnicos em um único ambiente de apoio à rotina produtiva.</p></section><section class="content-bands content-bands-rich library-page">${articlesSection('pt')}${libraryDownloads('pt')}</section>`;
 }
 
 function artigosPage() {
@@ -1293,14 +1294,22 @@ function translatedSupport(selectedLang, t) {
 }
 
 function translatedLibrary(selectedLang, t) {
-  return `<section class="internal-hero"><p class="eyebrow">${navLabel('biblioteca', selectedLang)}</p><h1>${h(t.libraryPageTitle)}</h1><p>${selectedLang === 'es' ? 'La biblioteca organiza archivos de consulta para seguimiento de lotes, indicadores y rutina de manejo.' : 'The library organizes reference files for flock monitoring, indicator reading and management routines.'}</p></section><section class="content-bands content-bands-rich library-page"><div class="content-grid"><article class="content-card"><span>01</span><h2>${selectedLang === 'es' ? 'Planillas de seguimiento de lote' : 'Flock monitoring spreadsheets'}</h2><p>${selectedLang === 'es' ? 'Modelos para organizar producción, consumo, mortalidad, peso de huevos y rutina técnica.' : 'Templates to organize production, feed intake, mortality, egg weight and technical routine.'}</p></article><article class="content-card"><span>02</span><h2>${selectedLang === 'es' ? 'Control de producción e indicadores' : 'Production and indicator control'}</h2><p>${selectedLang === 'es' ? 'Materiales de apoyo para registrar datos operativos.' : 'Support materials to record operational data.'}</p></article></div>${knowledgeArticle(selectedLang)}${libraryDownloads(selectedLang)}</section>`;
+  return `<section class="internal-hero"><p class="eyebrow">${navLabel('biblioteca', selectedLang)}</p><h1>${h(t.libraryPageTitle)}</h1><p>${selectedLang === 'es' ? 'La biblioteca organiza archivos de consulta para seguimiento de lotes, indicadores y rutina de manejo.' : 'The library organizes reference files for flock monitoring, indicator reading and management routines.'}</p></section><section class="content-bands content-bands-rich library-page">${articlesSection(selectedLang)}${libraryDownloads(selectedLang)}</section>`;
 }
 
-function knowledgeArticle(selectedLang = 'pt') {
-  const pdf = '/assets/biblioteca/a-hora-do-ovo-142-lohmann.pdf';
-  const label = selectedLang === 'es' ? 'Artículo destacado' : selectedLang === 'en' ? 'Featured article' : 'Artigo em destaque';
-  const button = selectedLang === 'es' ? 'Descargar PDF completo' : selectedLang === 'en' ? 'Download full PDF' : 'Baixar PDF completo';
-  return `<article class="knowledge-article"><div class="knowledge-article-head"><p class="eyebrow">${h(label)}</p><h2>Genética que se confirma no campo: Lohmann do Brasil é destaque na edição 142 da revista A Hora do Ovo</h2><p>A evolução genética ganha significado quando se transforma em resultado dentro da granja. A edição 142 da revista A Hora do Ovo apresenta resultados obtidos por clientes no Brasil e na Bolívia e mostra como pesquisa, seleção, manejo e acompanhamento técnico se conectam ao desempenho comercial.</p></div><div class="knowledge-article-body"><h3>Melhoramento genético conectado às condições reais de produção</h3><p>Um dos pontos abordados pela reportagem é o Teste Crossline, ferramenta utilizada pela Lohmann para acelerar o melhoramento genético. O programa avalia cruzamentos em condições desafiadoras de produção, permitindo identificar famílias com melhor resposta em ambientes específicos e rastrear características como persistência de postura, adaptação e eficiência produtiva.</p><p>No Brasil, esse trabalho considera condições típicas da produção nacional, como aviários abertos, alta incidência de luz natural e situações de maior estresse térmico. A proposta é aproximar a seleção genética dos desafios encontrados diariamente pelos produtores brasileiros.</p><h3>Resultados com dimensão internacional</h3><p>Na Bolívia, a Avícola Sofia alcançou resultados de 500, 503 e 504 ovos por ave alojada até as 100 semanas de idade com a Lohmann Brown Lite. No Brasil, a Naturovos, de Salvador do Sul (RS), também registrou desempenho acima de 500 ovos vermelhos por ave alojada, chegando a 503 ovos por ave até as 100 semanas.</p><p>Esses desempenhos evidenciam a interação entre genética, manejo, sanidade e equipe técnica. Mais do que registros isolados, demonstram um processo construído com pesquisa, validação em diferentes ambientes e acompanhamento próximo ao campo.</p><h3>Continuidade técnica</h3><p>A publicação também registra um novo momento da área técnica da Lohmann do Brasil, com Marcos Borges passando a atuar como Consultor Técnico para Contas-Chave e Matheus Fraga assumindo a Gerência Técnica. A transição reforça a continuidade do trabalho com proximidade, conhecimento técnico e suporte aos clientes.</p><p>Para a Lohmann do Brasil, seguir evoluindo significa manter genética, pesquisa e assistência técnica próximas da realidade do produtor, transformando conhecimento em aves mais adaptadas e potencial genético em resultados consistentes no campo.</p></div><a class="button primary" href="${pdf}" download>${h(button)}</a></article>`;
+function articlesSection(selectedLang = 'pt') {
+  const labels = {
+    pt: { eyebrow: 'Artigos', title: 'Artigos', intro: 'Conteúdos técnicos e institucionais publicados para apoiar a leitura de mercado, genética e desempenho em campo.', button: 'Ler artigo' },
+    en: { eyebrow: 'Articles', title: 'Articles', intro: 'Technical and institutional content to support market, genetics and field performance reading.', button: 'Read article' },
+    es: { eyebrow: 'Artículos', title: 'Artículos', intro: 'Contenidos técnicos e institucionales para apoyar la lectura de mercado, genética y desempeño en campo.', button: 'Leer artículo' },
+  }[selectedLang] || {};
+  const href = localizedHref('/base-de-conhecimento/genetica-que-se-confirma-no-campo', selectedLang);
+  return `<section class="articles-section"><header class="section-heading"><div><p class="eyebrow">${h(labels.eyebrow)}</p><h2>${h(labels.title)}</h2></div><p>${h(labels.intro)}</p></header><div class="article-card-grid"><article class="article-preview-card"><a class="article-preview-image" href="${h(href)}"><img src="/assets/artigo-lohmann-a-hora-do-ovo-edicao-142.png?v=${ASSET_VERSION}" alt="Artigo Lohmann do Brasil na edição 142 da revista A Hora do Ovo"></a><div class="article-preview-copy"><span>Publicação especial</span><h3>Genética que se confirma no campo: Lohmann do Brasil é destaque na edição 142 da revista A Hora do Ovo</h3><p>A publicação apresenta resultados históricos alcançados por clientes no Brasil e na Bolívia e evidencia como pesquisa, seleção genética, manejo e acompanhamento técnico se conectam à realidade das granjas.</p><a class="button primary" href="${h(href)}">${h(labels.button)}</a></div></article></div></section>`;
+}
+
+function articleLohmann142Page() {
+  const pdf = '/assets/biblioteca/artigo-lohmann-a-hora-do-ovo-edicao-142.pdf';
+  return `<article class="article-detail"><header class="article-detail-hero"><a class="back" href="/base-de-conhecimento">Voltar para Base de Conhecimento</a><p class="eyebrow">Publicação especial | A Hora do Ovo - Edição 142</p><h1>Genética que se confirma no campo: Lohmann do Brasil é destaque na edição 142 da revista A Hora do Ovo</h1><p>A publicação apresenta resultados históricos alcançados por clientes no Brasil e na Bolívia e evidencia como pesquisa, seleção genética, manejo e acompanhamento técnico se conectam à realidade das granjas.</p><blockquote>O melhoramento genético é contínuo, e seus resultados se tornam visíveis geração após geração, lote após lote.</blockquote></header><figure class="article-feature-image"><img src="/assets/artigo-lohmann-a-hora-do-ovo-edicao-142.png?v=${ASSET_VERSION}" alt="Clientes da Lohmann do Brasil conquistam resultados históricos em nível mundial"></figure><div class="article-detail-body"><p>A evolução genética ganha significado quando se transforma em resultado dentro da granja. E é justamente essa conexão entre pesquisa, seleção, manejo e desempenho comercial que ganha destaque na edição 142 da revista A Hora do Ovo, em matéria dedicada à Lohmann do Brasil.</p><p>Com o título “Clientes da Lohmann do Brasil conquistam resultados históricos em nível mundial”, a publicação apresenta resultados obtidos por clientes no Brasil e na Bolívia e mostra como o trabalho contínuo de melhoramento genético vem se traduzindo em produtividade, eficiência e maior adaptação das aves às diferentes realidades de produção.</p><p>A relevância da matéria está justamente em ir além dos números. Os resultados apresentados ajudam a demonstrar que o desempenho observado no campo é consequência de um processo construído ao longo do tempo, envolvendo pesquisa genética, avaliação em condições comerciais, acompanhamento técnico, manejo, biossegurança e equipes preparadas.</p><h2>Melhoramento genético conectado às condições reais de produção</h2><p>Um dos principais pontos abordados pela reportagem é o Teste Crossline, ferramenta utilizada pela Lohmann para acelerar o processo de melhoramento genético. O programa avalia cruzamentos de aves pedigree em condições desafiadoras de produção, permitindo identificar famílias que apresentam melhor resposta em ambientes específicos e rastrear características importantes, como persistência de postura, adaptação e eficiência produtiva.</p><p>No Brasil, esse trabalho é realizado há mais de três anos e considera condições típicas da produção nacional, como aviários abertos, alta incidência de luz natural e situações de maior estresse térmico. A proposta é aproximar ainda mais a seleção genética dos desafios encontrados diariamente pelos produtores brasileiros.</p><p>Esse conceito representa um ponto importante para o futuro da postura comercial: não basta buscar elevado potencial genético em condições controladas. É necessário desenvolver aves capazes de expressar esse potencial em diferentes sistemas, regiões, estruturas e níveis de tecnificação.</p><h2>Resultados que ganham dimensão internacional</h2><p>A reportagem apresenta exemplos concretos dessa evolução. Na Bolívia, a Avícola Sofia alcançou, nos três primeiros lotes da linhagem Lohmann Brown Lite, resultados de 500, 503 e 504 ovos por ave alojada até as 100 semanas de idade, desempenho que colocou a empresa entre os cinco melhores produtores do ranking mundial citado pela publicação.</p><p>No Brasil, a Naturovos, de Salvador do Sul (RS), também alcançou um marco relevante ao se tornar, segundo a matéria, a primeira empresa brasileira a superar a marca de 500 ovos vermelhos por ave alojada com a Lohmann Brown Lite, chegando a 503 ovos por ave até as 100 semanas.</p><p>Mais do que registros isolados, esses desempenhos ajudam a evidenciar a interação entre diferentes pilares da produção. A própria matéria reforça que genética, manejo, sanidade e equipe técnica precisam atuar de maneira integrada para que elevados níveis de produtividade sejam alcançados.</p><h2>Evolução que não se limita a uma linhagem</h2><p>Outro aspecto importante destacado pela publicação é que os avanços observados inicialmente na Lohmann Brown Lite também vêm sendo incorporados à Lohmann LSL Lite. Os resultados encontrados em diferentes regiões brasileiras apontam para uma evolução genética consistente também em grandes lotes comerciais e diante das particularidades de cada sistema produtivo.</p><p>Isso amplia a importância do trabalho de pesquisa e seleção: o objetivo não é simplesmente alcançar um determinado recorde, mas construir aves cada vez mais eficientes, resilientes e preparadas para os desafios do campo.</p><h2>Pessoas e continuidade também fazem parte da evolução</h2><p>A edição 142 de A Hora do Ovo também registra um novo momento da área técnica da Lohmann do Brasil. Após 11 anos à frente da Gerência Técnica, Marcos Borges passa a atuar como Consultor Técnico para Contas-Chave, enquanto Matheus Fraga, há oito anos na empresa, assume a Gerência Técnica.</p><p>A transição reforça a continuidade de um trabalho construído com proximidade, conhecimento técnico e acompanhamento dos clientes. Segundo a publicação, a mudança preserva o compromisso da empresa com a excelência técnica e com a entrega de genética de alto desempenho para a avicultura brasileira e latino-americana.</p><h2>Conhecimento que precisa ser compartilhado</h2><p>Ter esse trabalho apresentado em uma publicação especializada como A Hora do Ovo é também uma oportunidade de compartilhar com todo o setor os processos que existem por trás dos resultados alcançados no campo.</p><p>Recordes chamam atenção, mas sua maior importância está no que representam: anos de seleção genética, validação em diferentes ambientes produtivos, trabalho conjunto com os clientes e aprendizado contínuo a partir das condições reais das granjas.</p><p>A matéria da edição 142 mostra exatamente esse caminho. O melhoramento genético é contínuo, e seus resultados se tornam visíveis geração após geração, lote após lote.</p><p>Para a Lohmann do Brasil, seguir evoluindo significa manter genética, pesquisa e assistência técnica cada vez mais próximas da realidade do produtor, transformando conhecimento em aves mais adaptadas e potencial genético em resultados consistentes no campo.</p><div class="article-download-box"><strong>Quer conferir a matéria completa?</strong><p>Faça o download do PDF da publicação e acompanhe todos os detalhes, resultados e depoimentos apresentados na edição 142 da revista A Hora do Ovo.</p><a class="button primary" href="${pdf}" download>Baixar artigo em PDF</a></div></div></article>`;
 }
 function libraryDownloads(selectedLang = 'pt') {
   const labels = {
@@ -1313,7 +1322,7 @@ function libraryDownloads(selectedLang = 'pt') {
     ['PDF', 'Manual Sistemas Alternativos', 'manual-sistemas-alternativos-portugues.pdf'],
     ['PDF', 'Gestão de Lote BROWN-LITE', 'gestao-lote-brown-lite.pdf'],
     ['PDF', 'Gestão de Lote LSL-LITE', 'gestao-lote-lsl-lite.pdf'],
-    ['PDF', 'A Hora do Ovo 142 - Lohmann do Brasil', 'a-hora-do-ovo-142-lohmann.pdf'],
+    ['PDF', 'A Hora do Ovo 142 - Lohmann do Brasil', 'artigo-lohmann-a-hora-do-ovo-edicao-142.pdf'],
     ['XLSX', 'Gestão de Lote Diário Max e Min - LOHMANN BROWN', 'gestao-diaria-brown-ovos-1-galpao.xlsx'],
     ['XLSX', 'Gestão de Lote Diário Max e Min - LOHMANN LSL', 'gestao-diaria-lsl-ovos-1-galpao.xlsx'],
     ['XLSX', 'Planilha de Gestão Max e Min - LOHMANN BROWN LITE - 2025', 'planilha-gestao-max-min-brown-lite-2025.xlsx'],
