@@ -1447,3 +1447,111 @@ body.representantes-page .rep-card a.whatsapp-link:after {
   .top-language a:before{width:17px;height:12px;flex-basis:17px}
   .market-report-viewer iframe{min-height:420px}
 }
+
+/* Ajustes 2026-08-21: idiomas sem fundo ativo, radar sem iframe e cards de artigos */
+.top-language a.active{background:transparent!important;color:#111!important;box-shadow:inset 0 0 0 1px rgba(17,17,17,.62)!important;outline:0!important}
+.top-language a.active:before{box-shadow:0 0 0 1px rgba(17,17,17,.22)!important}
+.top-language a[href*="lang=pt"]:before{background:url('/assets/bandeira-brasil-real.png?v=20260821-articles-flags') center/cover no-repeat!important;image-rendering:auto!important}
+.top-language a[href*="lang=en"]:before{background:linear-gradient(#3c3b6e,#3c3b6e) 0 0/46% 54% no-repeat,repeating-linear-gradient(to bottom,#b22234 0 1.1px,#fff 1.1px 2.2px)!important;background-color:#fff!important}
+.top-language a[href*="lang=es"]:before{background:linear-gradient(to bottom,#aa151b 0 25%,#f1bf00 25% 75%,#aa151b 75%)!important}
+.market-report-image-only iframe{display:none!important}
+.market-report-image-only img{max-height:none}
+
+.articles-section{margin:50px 0;background:#0b0b0c;color:#fff;border:1px solid rgba(247,142,5,.28);padding:clamp(28px,5vw,56px)}
+.articles-section .section-heading h2,.articles-section .section-heading p{color:#fff}
+.article-card-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
+.article-preview-card{display:grid;grid-template-columns:minmax(180px,.48fr) minmax(0,.52fr);background:#141414;border:1px solid rgba(255,255,255,.12);min-height:320px;overflow:hidden}
+.article-preview-image{background:#050505;display:block;min-height:280px}
+.article-preview-image img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .35s ease}
+.article-preview-card:hover .article-preview-image img{transform:scale(1.03)}
+.article-preview-copy{padding:28px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:14px}
+.article-preview-copy span{font-family:Manrope,sans-serif;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#f7a813;font-size:11px}
+.article-preview-copy h3{color:#fff;font-size:clamp(24px,2.6vw,34px);line-height:1.03;margin:0}
+.article-preview-copy p{color:rgba(255,255,255,.72);line-height:1.65;margin:0}
+.article-detail{background:#ebe6dc;color:#111;padding-bottom:80px}
+.article-detail-hero{background:#090909;color:#fff;padding:clamp(80px,10vw,130px) var(--page-gutter) 70px;display:grid;gap:20px}
+.article-detail-hero h1{max-width:1050px;font-size:clamp(42px,6vw,82px);line-height:.96;margin:0;color:#fff}
+.article-detail-hero p{max-width:820px;color:rgba(255,255,255,.78);font-size:19px;line-height:1.65;margin:0}
+.article-detail-hero blockquote{max-width:820px;margin:10px 0 0;padding:24px 28px;border-left:4px solid #f7a813;background:rgba(247,168,19,.1);font-size:22px;line-height:1.4;color:#fff}
+.article-detail-layout{display:grid;grid-template-columns:minmax(260px,.38fr) minmax(0,.62fr);gap:44px;width:min(1160px,calc(100% - var(--page-gutter)*2));margin:64px auto 0;align-items:start}
+.article-detail-cover{position:sticky;top:120px;background:#fff;border:1px solid rgba(0,0,0,.08);box-shadow:0 18px 50px rgba(0,0,0,.12)}
+.article-detail-cover img{width:100%;display:block}
+.article-detail-body{background:#fff;padding:clamp(30px,5vw,62px);box-shadow:0 18px 50px rgba(0,0,0,.08)}
+.article-detail-body h2{font-size:clamp(28px,3vw,42px);line-height:1.05;margin:42px 0 14px;color:#111}
+.article-detail-body p{font-size:18px;line-height:1.82;color:#343434;margin:0 0 18px}
+.article-download-box{margin-top:42px;padding:28px;background:#111;color:#fff;border-left:5px solid #f7a813}
+.article-download-box p{color:rgba(255,255,255,.75)}
+.article-download-box strong{display:block;font-size:24px;margin-bottom:10px}
+@media (max-width:980px){.article-card-grid,.article-detail-layout{grid-template-columns:1fr}.article-preview-card{grid-template-columns:1fr}.article-detail-cover{position:relative;top:auto;max-width:520px}.article-detail-hero{padding-top:70px}}
+
+/* Ajustes 2026-08-21: Base de Conhecimento e artigo da revista */
+.library-page > .articles-section:first-child{
+  margin-top:0;
+}
+.article-card-grid{
+  grid-template-columns:1fr!important;
+  gap:18px!important;
+}
+.article-preview-card{
+  grid-template-columns:minmax(260px,340px) minmax(0,1fr)!important;
+  min-height:190px!important;
+  max-width:1040px!important;
+}
+.article-preview-image{
+  min-height:190px!important;
+}
+.article-preview-copy{
+  padding:22px 26px!important;
+  gap:10px!important;
+}
+.article-preview-copy h3{
+  font-size:clamp(20px,2.1vw,28px)!important;
+  line-height:1.12!important;
+}
+.article-preview-copy p{
+  font-size:15px!important;
+  line-height:1.55!important;
+}
+.article-preview-copy .button{
+  padding:13px 18px!important;
+  font-size:13px!important;
+}
+.article-feature-image{
+  width:min(1120px,calc(100% - var(--page-gutter)*2));
+  margin:44px auto 0;
+  background:#fff;
+  border:1px solid rgba(0,0,0,.08);
+  box-shadow:0 22px 70px rgba(0,0,0,.14);
+}
+.article-feature-image img{
+  width:100%;
+  display:block;
+}
+.article-detail-body{
+  width:min(1040px,calc(100% - var(--page-gutter)*2));
+  margin:44px auto 0!important;
+  box-sizing:border-box;
+}
+.article-detail-layout{
+  display:block!important;
+  width:auto!important;
+  margin:0!important;
+}
+.article-detail-cover{
+  display:none!important;
+}
+@media (max-width:720px){
+  .article-preview-card{
+    grid-template-columns:1fr!important;
+  }
+  .article-preview-image{
+    min-height:160px!important;
+  }
+  .article-feature-image{
+    width:calc(100% - 36px);
+    margin-top:28px;
+  }
+  .article-detail-body{
+    width:calc(100% - 36px);
+  }
+}
