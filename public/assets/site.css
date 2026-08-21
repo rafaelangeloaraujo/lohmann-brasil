@@ -1555,3 +1555,57 @@ body.representantes-page .rep-card a.whatsapp-link:after {
     width:calc(100% - 36px);
   }
 }
+
+/* Ajustes 2026-08-21: artigos da Base de Conhecimento em fundo claro */
+.library-page .articles-section{
+  background:transparent!important;
+  color:#151515!important;
+  border:0!important;
+  padding:clamp(22px,4vw,42px) 0!important;
+  margin:0 0 clamp(28px,4vw,46px)!important;
+}
+.library-page .articles-section .section-heading{
+  border-bottom:1px solid rgba(18,18,18,.12);
+  padding-bottom:22px;
+  margin-bottom:24px;
+}
+.library-page .articles-section .section-heading h2{
+  color:#161616!important;
+}
+.library-page .articles-section .section-heading p{
+  color:#5f5a52!important;
+}
+.library-page .article-preview-card{
+  background:#fffaf0!important;
+  border:1px solid rgba(18,18,18,.12)!important;
+  box-shadow:0 18px 48px rgba(38,31,21,.08)!important;
+}
+.library-page .article-preview-image{
+  background:#f4efe5!important;
+  border-right:1px solid rgba(18,18,18,.08)!important;
+}
+.library-page .article-preview-copy span{
+  color:#c36a00!important;
+}
+.library-page .article-preview-copy h3{
+  color:#151515!important;
+}
+.library-page .article-preview-copy p{
+  color:#615c54!important;
+}
+.library-page .article-preview-copy .button.primary{
+  background:#f5a313!important;
+  color:#111!important;
+  border-color:#f5a313!important;
+}
+.library-page .article-preview-copy .button.primary:hover{
+  background:#111!important;
+  color:#fff!important;
+  border-color:#111!important;
+}
+@media (max-width:720px){
+  .library-page .article-preview-image{
+    border-right:0!important;
+    border-bottom:1px solid rgba(18,18,18,.08)!important;
+  }
+}
