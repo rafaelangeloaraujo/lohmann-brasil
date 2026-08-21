@@ -1414,3 +1414,36 @@ body.representantes-page .rep-card a.whatsapp-link:after {
   }
 }
 
+
+/* Ajustes 2026-08-21: idiomas, relatório de mercado e artigo técnico */
+.br-flag{display:none!important}
+.top-language a{position:relative;padding:4px 7px;border-radius:999px;transition:background .2s ease,color .2s ease,box-shadow .2s ease,opacity .2s ease}
+.top-language a.active{background:#111;color:#fff;opacity:1;box-shadow:0 0 0 1px rgba(0,0,0,.14)}
+.top-language a:before{background-size:cover!important;background-position:center!important;background-repeat:no-repeat!important}
+.top-language a[href*="lang=pt"]:before{background-image:url('/assets/bandeira-brasil-real.png?v=20260821-radar-article')!important;background-color:#169b62!important;background-size:cover!important;background-position:center!important}
+.top-language a.active:before{box-shadow:0 0 0 2px #fff,0 0 0 3px rgba(0,0,0,.24)}
+
+.market-report-section{width:100%;max-width:none;margin:0;background:#080808;color:#fff;padding:72px var(--page-gutter);display:grid;grid-template-columns:minmax(240px,.72fr) minmax(0,1.28fr);gap:34px;align-items:start;border-top:1px solid rgba(247,142,5,.35)}
+.market-report-copy{max-width:520px}
+.market-report-copy h2{font-size:clamp(32px,4vw,58px);line-height:.98;margin:18px 0;color:#fff}
+.market-report-copy p{color:rgba(255,255,255,.78);font-size:18px;line-height:1.7;margin-bottom:26px}
+.market-report-viewer{display:grid;gap:18px;min-width:0}
+.market-report-viewer img{width:100%;max-height:760px;object-fit:contain;background:#fff;border:1px solid rgba(255,255,255,.14);box-shadow:0 24px 70px rgba(0,0,0,.35)}
+.market-report-viewer iframe{width:100%;min-height:680px;border:1px solid rgba(255,255,255,.16);background:#fff;box-shadow:0 24px 70px rgba(0,0,0,.35)}
+
+.knowledge-article{background:#0b0b0c;color:#fff;border:1px solid rgba(247,142,5,.32);padding:clamp(28px,5vw,56px);margin:42px 0;display:grid;grid-template-columns:minmax(240px,.8fr) minmax(0,1.2fr);gap:34px;align-items:start}
+.knowledge-article h2{font-size:clamp(30px,4vw,54px);line-height:1;margin:14px 0 20px;color:#fff}
+.knowledge-article h3{font-size:20px;color:#fff;margin:0 0 12px}
+.knowledge-article p{color:rgba(255,255,255,.76);line-height:1.75}
+.knowledge-article-body{display:grid;gap:18px}
+.knowledge-article .button{justify-self:start;align-self:end;margin-top:8px}
+
+@media (max-width: 900px){
+  .market-report-section,.knowledge-article{grid-template-columns:1fr;padding:48px var(--page-gutter)}
+  .market-report-viewer iframe{min-height:520px}
+}
+@media (max-width: 560px){
+  .top-language a{padding:3px 5px}
+  .top-language a:before{width:17px;height:12px;flex-basis:17px}
+  .market-report-viewer iframe{min-height:420px}
+}
