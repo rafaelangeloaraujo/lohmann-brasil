@@ -1,5 +1,5 @@
 const LANGS = new Set(['pt', 'en', 'es']);
-const ASSET_VERSION = '20260821-articles-flags';
+const ASSET_VERSION = '20260821-knowledge-light';
 
 const ROUTES = {
   '/': 'home',
