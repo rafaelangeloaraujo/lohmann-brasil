@@ -1713,3 +1713,79 @@ body.representantes-page .rep-card a.whatsapp-link:after {
     background:#111!important;
   }
 }
+
+/* Ajuste 2026-08-26: o menu completo deve permanecer em telas intermediarias. */
+@media (min-width:1101px) and (max-width:1360px){
+  .site-header,
+  .site-header.is-scrolled{
+    gap:10px!important;
+    padding-left:clamp(18px,3vw,44px)!important;
+    padding-right:clamp(18px,3vw,44px)!important;
+  }
+  .site-header .brand,
+  .site-header.is-scrolled .brand{
+    min-width:92px!important;
+    flex:0 0 92px!important;
+  }
+  .site-header .brand img,
+  .site-header.is-scrolled .brand img{
+    width:82px!important;
+    max-height:62px!important;
+  }
+  .nav{
+    display:flex!important;
+    flex:1 1 auto!important;
+    min-width:0!important;
+    margin:0!important;
+    justify-content:center!important;
+    gap:clamp(7px,.58vw,11px)!important;
+    font-size:clamp(11px,.82vw,12px)!important;
+    line-height:1!important;
+    white-space:nowrap!important;
+    overflow:visible!important;
+  }
+  .nav a{
+    padding:30px 0!important;
+    letter-spacing:-.025em!important;
+  }
+  .radar-nav-link{
+    gap:5px!important;
+  }
+  .radar-nav-link span{
+    width:8px!important;
+    height:8px!important;
+    flex:0 0 8px!important;
+  }
+  .header-actions{
+    flex:0 0 auto!important;
+    margin-left:0!important;
+    gap:8px!important;
+  }
+  .portal-link{
+    padding:9px 10px!important;
+    font-size:10px!important;
+    max-width:none!important;
+    white-space:nowrap!important;
+  }
+  .menu-toggle{
+    display:none!important;
+  }
+  .egg-photo-layer{
+    background-size:auto 49%!important;
+    background-position:30% center!important;
+  }
+  .lohmann-l-motion{
+    left:68%!important;
+    width:min(33vw,410px)!important;
+    height:min(33vw,410px)!important;
+  }
+}
+
+@media (max-width:1100px){
+  .nav{
+    display:none!important;
+  }
+  .menu-toggle{
+    display:grid!important;
+  }
+}
