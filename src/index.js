@@ -1,5 +1,5 @@
 const LANGS = new Set(['pt', 'en', 'es']);
-const ASSET_VERSION = '20260826-responsive-guides-reps';
+const ASSET_VERSION = '20260826-menu-intermediate-fix';
 
 const ROUTES = {
   '/': 'home',
