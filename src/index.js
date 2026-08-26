@@ -1,5 +1,5 @@
 const LANGS = new Set(['pt', 'en', 'es']);
-const ASSET_VERSION = '20260821-knowledge-light';
+const ASSET_VERSION = '20260826-responsive-guides-reps';
 
 const ROUTES = {
   '/': 'home',
@@ -206,6 +206,7 @@ async function representatives(env) {
     grouped[uf] ||= [];
     grouped[uf].push({
       ...item,
+      photo: item.photo || representativePhoto(item.name),
       initials: initials(item.name),
       whatsapp: whatsapp(item.phone, item.name),
     });
@@ -223,7 +224,7 @@ function fallbackRepresentativeMap() {
     ['Carlos Gastali', 'Representante comercial', 'MS', 'Mato Grosso do Sul e São Paulo (Bastos)', 'MS / Bastos, SP', '14 99857-6450', '', 40],
     ['Carlos Gastali', 'Representante comercial', 'SP', 'Mato Grosso do Sul e São Paulo (Bastos)', 'MS / Bastos, SP', '14 99857-6450', '', 41],
     ['Jair Luis', 'Representante comercial', 'SP', 'Atendimento comercial regional', 'SP', '14 99786-7924', '/assets/representantes/jair-luis.png', 50],
-    ['Matheus Fraga', 'Representante comercial', 'MG', 'Minas Gerais', 'MG', '17 99772-0946', '', 60],
+    ['Matheus Fraga', 'Representante comercial', 'MG', 'Minas Gerais', 'MG', '17 99772-0946', '/assets/team/matheus-fraga.jpg', 60],
     ['Roberson Bergamini', 'Representante comercial', 'MT', 'Mato Grosso, Rondônia e Acre', 'MT / RO / AC', '66 99995-9998', '/assets/representantes/roberson-bergamini.png', 70],
     ['Roberson Bergamini', 'Representante comercial', 'RO', 'Mato Grosso, Rondônia e Acre', 'MT / RO / AC', '66 99995-9998', '/assets/representantes/roberson-bergamini.png', 71],
     ['Roberson Bergamini', 'Representante comercial', 'AC', 'Mato Grosso, Rondônia e Acre', 'MT / RO / AC', '66 99995-9998', '/assets/representantes/roberson-bergamini.png', 72],
@@ -234,9 +235,9 @@ function fallbackRepresentativeMap() {
     ['Thiago Dias', 'Representante comercial', 'SE', 'Bahia e Sergipe', 'BA / SE', '79 99987-8819', '/assets/representantes/thiago-dias.png', 111],
     ['Eduardo Galvão', 'Representante comercial', 'AL', 'Alagoas e Pernambuco (São Bento do Una)', 'AL / PE', '82 9 9641-4435', '/assets/representantes/eduardo-galvao.png', 120],
     ['Eduardo Galvão', 'Representante comercial', 'PE', 'Alagoas e Pernambuco (São Bento do Una)', 'AL / PE', '82 9 9641-4435', '/assets/representantes/eduardo-galvao.png', 121],
-    ['Charles Lima', 'Gerente Comercial Norte e Nordeste', 'PE', 'Pernambuco, Paraíba e Rio Grande do Norte', 'PE / PB / RN', '17 99757-0688', '', 130],
-    ['Charles Lima', 'Gerente Comercial Norte e Nordeste', 'PB', 'Pernambuco, Paraíba e Rio Grande do Norte', 'PE / PB / RN', '17 99757-0688', '', 131],
-    ['Charles Lima', 'Gerente Comercial Norte e Nordeste', 'RN', 'Pernambuco, Paraíba e Rio Grande do Norte', 'PE / PB / RN', '17 99757-0688', '', 132],
+    ['Charles Lima', 'Gerente Comercial Norte e Nordeste', 'PE', 'Pernambuco, Paraíba e Rio Grande do Norte', 'PE / PB / RN', '17 99757-0688', '/assets/team/charles-lima.jpg', 130],
+    ['Charles Lima', 'Gerente Comercial Norte e Nordeste', 'PB', 'Pernambuco, Paraíba e Rio Grande do Norte', 'PE / PB / RN', '17 99757-0688', '/assets/team/charles-lima.jpg', 131],
+    ['Charles Lima', 'Gerente Comercial Norte e Nordeste', 'RN', 'Pernambuco, Paraíba e Rio Grande do Norte', 'PE / PB / RN', '17 99757-0688', '/assets/team/charles-lima.jpg', 132],
     ['Valdir Castiglioni', 'Representante comercial', 'CE', 'Ceará, Piauí, Maranhão e Pará', 'CE / PI / MA / PA', '85 98115-9972', '', 140],
     ['Valdir Castiglioni', 'Representante comercial', 'PI', 'Ceará, Piauí, Maranhão e Pará', 'CE / PI / MA / PA', '85 98115-9972', '', 141],
     ['Valdir Castiglioni', 'Representante comercial', 'MA', 'Ceará, Piauí, Maranhão e Pará', 'CE / PI / MA / PA', '85 98115-9972', '', 142],
@@ -311,6 +312,13 @@ function teamPhoto(name) {
   if (key.includes('guilherme')) return '/assets/team/guilherme-ferreira.jpg';
   if (key.includes('judson')) return '/assets/team/judson-soares.jpg';
   if (key.includes('felipe')) return '/assets/team/felipe-kawamura.jpg';
+  return '';
+}
+
+function representativePhoto(name) {
+  const key = String(name || '').toLowerCase();
+  if (key.includes('charles')) return '/assets/team/charles-lima.jpg';
+  if (key.includes('matheus')) return '/assets/team/matheus-fraga.jpg';
   return '';
 }
 
@@ -585,12 +593,20 @@ function productGuideLinks(slug, selectedLang = 'pt') {
 function productGuideFiles(slug = '') {
   const isBrown = String(slug).includes('brown');
   const specific = isBrown
-    ? { title: 'Gestão de Lote BROWN-LITE', shortTitle: 'Guia BROWN-LITE', file: 'gestao-lote-brown-lite.pdf' }
-    : { title: 'Gestão de Lote LSL-LITE', shortTitle: 'Guia LSL-LITE', file: 'gestao-lote-lsl-lite.pdf' };
+    ? { type: 'PDF', title: 'Gestão de Lote BROWN-LITE', shortTitle: 'Gestão BROWN-LITE', file: 'gestao-lote-brown-lite.pdf' }
+    : { type: 'PDF', title: 'Gestão de Lote LSL-LITE', shortTitle: 'Gestão LSL-LITE', file: 'gestao-lote-lsl-lite.pdf' };
+  const dailySheet = isBrown
+    ? { type: 'XLSX', title: 'Gestão de Lote Diário Max e Min - LOHMANN BROWN', shortTitle: 'Planilha diária BROWN', file: 'gestao-diaria-brown-ovos-1-galpao.xlsx' }
+    : { type: 'XLSX', title: 'Gestão de Lote Diário Max e Min - LOHMANN LSL', shortTitle: 'Planilha diária LSL', file: 'gestao-diaria-lsl-ovos-1-galpao.xlsx' };
+  const maxMinSheet = isBrown
+    ? { type: 'XLSX', title: 'Planilha de Gestão Max e Min - LOHMANN BROWN LITE - 2025', shortTitle: 'Max e Min BROWN', file: 'planilha-gestao-max-min-brown-lite-2025.xlsx' }
+    : { type: 'XLSX', title: 'Planilha de Gestão Max e Min - LOHMANN LSL LITE - 2025', shortTitle: 'Max e Min LSL', file: 'planilha-gestao-max-min-lsl-lite-2025.xlsx' };
   return [
     specific,
-    { title: 'Guia de Manejo LSL e BROWN', shortTitle: 'Guia LSL e BROWN', file: 'guia-de-manejo-lsl-brown.pdf' },
-    { title: 'Manual Sistemas Alternativos', shortTitle: 'Sistemas Alternativos', file: 'manual-sistemas-alternativos-portugues.pdf' },
+    dailySheet,
+    maxMinSheet,
+    { type: 'PDF', title: 'Guia de Manejo LSL e BROWN', shortTitle: 'Guia LSL e BROWN', file: 'guia-de-manejo-lsl-brown.pdf' },
+    { type: 'PDF', title: 'Manual Sistemas Alternativos', shortTitle: 'Sistemas Alternativos', file: 'manual-sistemas-alternativos-portugues.pdf' },
   ];
 }
 
@@ -714,7 +730,7 @@ function productGuideDownloads(slug = '', selectedLang = 'pt') {
     es: { eyebrow: 'Guías de manejo', title: 'Acceso rápido a materiales técnicos', desc: 'Los archivos abajo están relacionados con la línea seleccionada. Los materiales generales aparecen en ambas líneas.', button: 'Descargar guía' },
   }[selectedLang] || {};
   const files = productGuideFiles(slug);
-  return `<section class="library-downloads product-guides"><div class="product-guides-inner"><header class="section-heading"><div><p class="eyebrow">${h(labels.eyebrow)}</p><h2>${h(labels.title)}</h2></div><p>${h(labels.desc)}</p></header><div class="download-grid">${files.map((file) => `<article class="download-card"><span>PDF</span><h3>${h(file.title)}</h3><a class="button primary" href="/assets/biblioteca/${h(file.file)}" download>${h(labels.button)}</a></article>`).join('')}</div></div></section>`;
+  return `<section class="library-downloads product-guides"><div class="product-guides-inner"><header class="section-heading"><div><p class="eyebrow">${h(labels.eyebrow)}</p><h2>${h(labels.title)}</h2></div><p>${h(labels.desc)}</p></header><div class="download-grid">${files.map((file) => `<article class="download-card"><span>${h(file.type || 'PDF')}</span><h3>${h(file.title)}</h3><a class="button primary" href="/assets/biblioteca/${h(file.file)}" download>${h(labels.button)}</a></article>`).join('')}</div></div></section>`;
 }
 
 function productSpecs(slug) {
