@@ -117,6 +117,35 @@ if (repList && stateNodes.length) {
 
 repResetButton?.addEventListener('click', resetRepresentatives);
 
+const absoluteAssetUrl = (path) => {
+  const cleanPath = String(path || '').split('?')[0];
+  return new URL(cleanPath, window.location.origin).href;
+};
+
+document.querySelectorAll('.report-share-buttons').forEach((group) => {
+  const imageUrl = absoluteAssetUrl(group.dataset.shareImage);
+  const text = `Relatório mensal do plantel brasileiro de poedeiras - Lohmann do Brasil: ${imageUrl}`;
+  group.querySelector('[data-share-channel="whatsapp"]')?.setAttribute('href', `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`);
+  group.querySelector('[data-share-channel="email"]')?.setAttribute('href', `mailto:?subject=${encodeURIComponent('Relatório mensal Lohmann do Brasil')}&body=${encodeURIComponent(text)}`);
+  group.querySelector('[data-share-channel="instagram"]')?.setAttribute('href', imageUrl);
+});
+
+document.querySelectorAll('.report-share-native').forEach((button) => {
+  button.addEventListener('click', async () => {
+    const imageUrl = absoluteAssetUrl(button.dataset.shareImage);
+    const title = 'Relatório mensal Lohmann do Brasil';
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, text: `${title}: ${imageUrl}`, url: imageUrl });
+        return;
+      } catch (error) {
+        if (error?.name === 'AbortError') return;
+      }
+    }
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(`${title}: ${imageUrl}`)}`, '_blank', 'noopener');
+  });
+});
+
 const cookieConsentKey = 'lohmann_cookie_consent';
 if (!localStorage.getItem(cookieConsentKey)) {
   const banner = document.createElement('section');

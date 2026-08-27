@@ -1789,3 +1789,122 @@ body.representantes-page .rep-card a.whatsapp-link:after {
     display:grid!important;
   }
 }
+
+/* Ajustes 2026-08-27: header mobile e compartilhamento do relatorio. */
+.market-report-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+  align-items:center;
+  margin-bottom:16px;
+}
+.market-report-actions .button.ghost{
+  border-color:rgba(255,255,255,.34)!important;
+  color:#fff!important;
+  background:transparent!important;
+}
+.report-share-buttons{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+}
+.report-share-button{
+  display:inline-flex;
+  align-items:center;
+  min-height:38px;
+  padding:0 13px;
+  border:1px solid rgba(255,255,255,.22);
+  color:#fff!important;
+  font:900 11px Manrope,sans-serif;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  background:rgba(255,255,255,.06);
+}
+.report-share-button:before{
+  content:"";
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  margin-right:8px;
+  background:#f5a313;
+}
+.report-share-whatsapp:before{background:#20b038}
+.report-share-email:before{background:#f5a313}
+.report-share-instagram:before{background:linear-gradient(135deg,#feda75,#d62976,#4f5bd5)}
+
+@media (max-width:1100px){
+  .site-header,
+  .site-header.is-scrolled{
+    justify-content:flex-start!important;
+  }
+  .site-header .brand,
+  .site-header.is-scrolled .brand{
+    order:1!important;
+    margin-right:0!important;
+  }
+  .site-header .header-actions,
+  .site-header.is-scrolled .header-actions{
+    order:2!important;
+    margin-left:auto!important;
+  }
+  .site-header .menu-toggle,
+  .site-header.is-scrolled .menu-toggle{
+    order:3!important;
+    margin-left:14px!important;
+    margin-right:0!important;
+    justify-self:end!important;
+  }
+  .site-header .menu-toggle span{
+    background:#fff!important;
+  }
+  .menu-open .site-header,
+  .menu-open .site-header.is-scrolled{
+    background:#fff!important;
+    color:#111!important;
+  }
+  .menu-open .site-header .brand .logo-top{
+    opacity:0!important;
+  }
+  .menu-open .site-header .brand .logo-scrolled{
+    opacity:1!important;
+  }
+  .menu-open .site-header .menu-toggle span,
+  .menu-open .site-header.is-scrolled .menu-toggle span{
+    background:#111!important;
+  }
+  .menu-open .nav{
+    background:#0b0c0e!important;
+    border-top:1px solid rgba(255,255,255,.12)!important;
+  }
+  .menu-open .nav a{
+    color:#fff!important;
+  }
+}
+
+@media (max-width:560px){
+  .site-header,
+  .site-header.is-scrolled{
+    padding-left:20px!important;
+    padding-right:18px!important;
+  }
+  .site-header .brand,
+  .site-header.is-scrolled .brand{
+    flex:0 0 auto!important;
+    min-width:58px!important;
+  }
+  .site-header .header-actions,
+  .site-header.is-scrolled .header-actions{
+    gap:0!important;
+  }
+  .site-header .menu-toggle,
+  .site-header.is-scrolled .menu-toggle{
+    width:42px!important;
+    height:42px!important;
+    flex:0 0 42px!important;
+  }
+  .market-report-actions,
+  .report-share-buttons{
+    display:grid;
+    grid-template-columns:1fr;
+  }
+}
