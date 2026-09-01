@@ -1,6 +1,7 @@
 const LANGS = new Set(['pt', 'en', 'es']);
 const ASSET_VERSION = '20260827-mobile-report-share';
 const GOOGLE_ANALYTICS_ID = 'G-0E2FLEYP1B';
+const ARTICLE_142_PDF = '/assets/biblioteca/artigo-lohmann-a-hora-do-ovo-edicao-142.pdf';
 
 function googleAnalyticsTag() {
   return `<script async src="https://www.googletagmanager.com/gtag/js?id=${GOOGLE_ANALYTICS_ID}"></script>
@@ -81,6 +82,10 @@ export default {
     if (langPrefix) {
       url.searchParams.set('lang', langPrefix[1]);
       path = normalizePath(langPrefix[2] || '/');
+    }
+
+    if (path === '/download/artigo-lohmann-a-hora-do-ovo-edicao-142.pdf') {
+      return downloadAsset(request, env, ARTICLE_142_PDF, 'Artigo_Lohmann_A_Hora_do_Ovo_Edicao_142.pdf');
     }
 
     if (path.startsWith('/assets/')) {
@@ -173,6 +178,31 @@ function text(body, type) {
       'content-type': `${type}; charset=utf-8`,
       ...securityHeaders(),
     },
+  });
+}
+
+async function downloadAsset(request, env, assetPath, filename) {
+  const assetUrl = new URL(assetPath, request.url);
+  const assetResponse = env.ASSETS
+    ? await env.ASSETS.fetch(new Request(assetUrl.toString(), request))
+    : await fetch(assetUrl.toString());
+
+  if (!assetResponse.ok) {
+    return new Response('Arquivo não encontrado para download.', {
+      status: 404,
+      headers: securityHeaders(),
+    });
+  }
+
+  const headers = new Headers(assetResponse.headers);
+  headers.set('content-type', 'application/pdf');
+  headers.set('content-disposition', `attachment; filename="${filename}"`);
+  headers.set('cache-control', 'public, max-age=31536000, immutable');
+  Object.entries(securityHeaders()).forEach(([key, value]) => headers.set(key, value));
+
+  return new Response(assetResponse.body, {
+    status: assetResponse.status,
+    headers,
   });
 }
 
@@ -1337,7 +1367,7 @@ function articlesSection(selectedLang = 'pt') {
 }
 
 function articleLohmann142Page() {
-  const pdf = '/assets/biblioteca/artigo-lohmann-a-hora-do-ovo-edicao-142.pdf';
+  const pdf = '/download/artigo-lohmann-a-hora-do-ovo-edicao-142.pdf';
   return `<article class="article-detail"><header class="article-detail-hero"><a class="back" href="/base-de-conhecimento">Voltar para Base de Conhecimento</a><p class="eyebrow">Publicação especial | A Hora do Ovo - Edição 142</p><h1>Genética que se confirma no campo: Lohmann do Brasil é destaque na edição 142 da revista A Hora do Ovo</h1><p>A publicação apresenta resultados históricos alcançados por clientes no Brasil e na Bolívia e evidencia como pesquisa, seleção genética, manejo e acompanhamento técnico se conectam à realidade das granjas.</p><blockquote>O melhoramento genético é contínuo, e seus resultados se tornam visíveis geração após geração, lote após lote.</blockquote></header><figure class="article-feature-image"><img src="/assets/artigo-lohmann-a-hora-do-ovo-edicao-142.png?v=${ASSET_VERSION}" alt="Clientes da Lohmann do Brasil conquistam resultados históricos em nível mundial"></figure><div class="article-detail-body"><p>A evolução genética ganha significado quando se transforma em resultado dentro da granja. E é justamente essa conexão entre pesquisa, seleção, manejo e desempenho comercial que ganha destaque na edição 142 da revista A Hora do Ovo, em matéria dedicada à Lohmann do Brasil.</p><p>Com o título “Clientes da Lohmann do Brasil conquistam resultados históricos em nível mundial”, a publicação apresenta resultados obtidos por clientes no Brasil e na Bolívia e mostra como o trabalho contínuo de melhoramento genético vem se traduzindo em produtividade, eficiência e maior adaptação das aves às diferentes realidades de produção.</p><p>A relevância da matéria está justamente em ir além dos números. Os resultados apresentados ajudam a demonstrar que o desempenho observado no campo é consequência de um processo construído ao longo do tempo, envolvendo pesquisa genética, avaliação em condições comerciais, acompanhamento técnico, manejo, biossegurança e equipes preparadas.</p><h2>Melhoramento genético conectado às condições reais de produção</h2><p>Um dos principais pontos abordados pela reportagem é o Teste Crossline, ferramenta utilizada pela Lohmann para acelerar o processo de melhoramento genético. O programa avalia cruzamentos de aves pedigree em condições desafiadoras de produção, permitindo identificar famílias que apresentam melhor resposta em ambientes específicos e rastrear características importantes, como persistência de postura, adaptação e eficiência produtiva.</p><p>No Brasil, esse trabalho é realizado há mais de três anos e considera condições típicas da produção nacional, como aviários abertos, alta incidência de luz natural e situações de maior estresse térmico. A proposta é aproximar ainda mais a seleção genética dos desafios encontrados diariamente pelos produtores brasileiros.</p><p>Esse conceito representa um ponto importante para o futuro da postura comercial: não basta buscar elevado potencial genético em condições controladas. É necessário desenvolver aves capazes de expressar esse potencial em diferentes sistemas, regiões, estruturas e níveis de tecnificação.</p><h2>Resultados que ganham dimensão internacional</h2><p>A reportagem apresenta exemplos concretos dessa evolução. Na Bolívia, a Avícola Sofia alcançou, nos três primeiros lotes da linhagem Lohmann Brown Lite, resultados de 500, 503 e 504 ovos por ave alojada até as 100 semanas de idade, desempenho que colocou a empresa entre os cinco melhores produtores do ranking mundial citado pela publicação.</p><p>No Brasil, a Naturovos, de Salvador do Sul (RS), também alcançou um marco relevante ao se tornar, segundo a matéria, a primeira empresa brasileira a superar a marca de 500 ovos vermelhos por ave alojada com a Lohmann Brown Lite, chegando a 503 ovos por ave até as 100 semanas.</p><p>Mais do que registros isolados, esses desempenhos ajudam a evidenciar a interação entre diferentes pilares da produção. A própria matéria reforça que genética, manejo, sanidade e equipe técnica precisam atuar de maneira integrada para que elevados níveis de produtividade sejam alcançados.</p><h2>Evolução que não se limita a uma linhagem</h2><p>Outro aspecto importante destacado pela publicação é que os avanços observados inicialmente na Lohmann Brown Lite também vêm sendo incorporados à Lohmann LSL Lite. Os resultados encontrados em diferentes regiões brasileiras apontam para uma evolução genética consistente também em grandes lotes comerciais e diante das particularidades de cada sistema produtivo.</p><p>Isso amplia a importância do trabalho de pesquisa e seleção: o objetivo não é simplesmente alcançar um determinado recorde, mas construir aves cada vez mais eficientes, resilientes e preparadas para os desafios do campo.</p><h2>Pessoas e continuidade também fazem parte da evolução</h2><p>A edição 142 de A Hora do Ovo também registra um novo momento da área técnica da Lohmann do Brasil. Após 11 anos à frente da Gerência Técnica, Marcos Borges passa a atuar como Consultor Técnico para Contas-Chave, enquanto Matheus Fraga, há oito anos na empresa, assume a Gerência Técnica.</p><p>A transição reforça a continuidade de um trabalho construído com proximidade, conhecimento técnico e acompanhamento dos clientes. Segundo a publicação, a mudança preserva o compromisso da empresa com a excelência técnica e com a entrega de genética de alto desempenho para a avicultura brasileira e latino-americana.</p><h2>Conhecimento que precisa ser compartilhado</h2><p>Ter esse trabalho apresentado em uma publicação especializada como A Hora do Ovo é também uma oportunidade de compartilhar com todo o setor os processos que existem por trás dos resultados alcançados no campo.</p><p>Recordes chamam atenção, mas sua maior importância está no que representam: anos de seleção genética, validação em diferentes ambientes produtivos, trabalho conjunto com os clientes e aprendizado contínuo a partir das condições reais das granjas.</p><p>A matéria da edição 142 mostra exatamente esse caminho. O melhoramento genético é contínuo, e seus resultados se tornam visíveis geração após geração, lote após lote.</p><p>Para a Lohmann do Brasil, seguir evoluindo significa manter genética, pesquisa e assistência técnica cada vez mais próximas da realidade do produtor, transformando conhecimento em aves mais adaptadas e potencial genético em resultados consistentes no campo.</p><div class="article-download-box"><strong>Quer conferir a matéria completa?</strong><p>Faça o download do PDF da publicação e acompanhe todos os detalhes, resultados e depoimentos apresentados na edição 142 da revista A Hora do Ovo.</p><a class="button primary" href="${pdf}" download>Baixar artigo em PDF</a></div></div></article>`;
 }
 function libraryDownloads(selectedLang = 'pt') {
