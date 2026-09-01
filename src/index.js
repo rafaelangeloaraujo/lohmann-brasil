@@ -1,7 +1,7 @@
 const LANGS = new Set(['pt', 'en', 'es']);
 const ASSET_VERSION = '20260827-mobile-report-share';
 const GOOGLE_ANALYTICS_ID = 'G-0E2FLEYP1B';
-const ARTICLE_142_PDF = '/assets/biblioteca/artigo-lohmann-a-hora-do-ovo-edicao-142.pdf';
+const ARTICLE_142_PDF = '/assets/biblioteca/a-hora-do-ovo-142-lohmann.pdf';
 
 function googleAnalyticsTag() {
   return `<script async src="https://www.googletagmanager.com/gtag/js?id=${GOOGLE_ANALYTICS_ID}"></script>
@@ -85,7 +85,7 @@ export default {
     }
 
     if (path === '/download/artigo-lohmann-a-hora-do-ovo-edicao-142.pdf') {
-      return downloadAsset(request, env, ARTICLE_142_PDF, 'Artigo_Lohmann_A_Hora_do_Ovo_Edicao_142.pdf');
+      return downloadAsset(request, env, ARTICLE_142_PDF, 'A_Hora_do_Ovo_142_Lohmann_do_Brasil.pdf');
     }
 
     if (path.startsWith('/assets/')) {
@@ -1381,7 +1381,7 @@ function libraryDownloads(selectedLang = 'pt') {
     ['PDF', 'Manual Sistemas Alternativos', 'manual-sistemas-alternativos-portugues.pdf'],
     ['PDF', 'Gestão de Lote BROWN-LITE', 'gestao-lote-brown-lite.pdf'],
     ['PDF', 'Gestão de Lote LSL-LITE', 'gestao-lote-lsl-lite.pdf'],
-    ['PDF', 'A Hora do Ovo 142 - Lohmann do Brasil', 'artigo-lohmann-a-hora-do-ovo-edicao-142.pdf'],
+    ['PDF', 'A Hora do Ovo 142 - Lohmann do Brasil', 'a-hora-do-ovo-142-lohmann.pdf'],
     ['XLSX', 'Gestão de Lote Diário Max e Min - LOHMANN BROWN', 'gestao-diaria-brown-ovos-1-galpao.xlsx'],
     ['XLSX', 'Gestão de Lote Diário Max e Min - LOHMANN LSL', 'gestao-diaria-lsl-ovos-1-galpao.xlsx'],
     ['XLSX', 'Planilha de Gestão Max e Min - LOHMANN BROWN LITE - 2025', 'planilha-gestao-max-min-brown-lite-2025.xlsx'],
