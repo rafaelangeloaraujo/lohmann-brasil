@@ -700,6 +700,13 @@ input,textarea,select,button{max-width:100%}
 .technical-radar .eyebrow{display:inline-flex;align-items:center;gap:10px;color:#f5a313}
 .cepea-widget-card{background:#000;border:1px solid rgba(245,163,19,.42);border-radius:24px;padding:24px;box-shadow:0 28px 80px rgba(0,0,0,.45);overflow:auto}
 .cepea-widget-card table,.cepea-widget-card iframe{max-width:100%!important}
+.cepea-widget-card .imagenet-widget-tabela{border-collapse:collapse;width:100%;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#fff}
+.cepea-widget-card .imagenet-widget-tabela th,.cepea-widget-card .imagenet-widget-tabela td{padding:9px 10px;text-align:center}
+.cepea-widget-card .imagenet-widget-tabela thead th{background:#f78e05;color:#171717;font-weight:800}
+.cepea-widget-card .imagenet-widget-tabela tbody tr:nth-child(even){background:#353535}
+.cepea-widget-card .imagenet-widget-tabela tfoot td{text-align:left;color:#d8d0c2;font-size:12px;padding-top:14px}
+.cepea-widget-card .imagenet-widget-tabela a{color:#f5a313}
+.cepea-unavailable{margin:0;color:#d8d0c2;line-height:1.6;text-align:center}
 .library-page .page-cta{margin-top:28px}
 .footer-brand img{content:url("/assets/logo-lohmann-header-white.png");width:190px;max-height:none}
 
