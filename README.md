@@ -67,6 +67,14 @@ npm run deploy
 
 A versão PHP/MySQL original não é executada em Workers. Esta pasta é a nova base Cloudflare: páginas renderizadas pelo Worker, assets estáticos e dados no D1.
 
+## Segurança da aplicação
+
+- Formulários públicos, login administrativo e APIs mutáveis usam token anti-CSRF em cookie `SameSite=Lax` e no corpo ou cabeçalho da requisição, com validação de origem.
+- Respostas HTML usam Content Security Policy com nonce exclusivo por resposta.
+- O Radar de Mercado consulta a CEPEA no Worker, mantém cache por seis horas e renderiza somente campos de texto sanitizados. Nenhum JavaScript da CEPEA é executado no navegador.
+- Scripts externos dinâmicos, incluindo o carregamento direto do Google Analytics, ficam desativados porque não oferecem um hash SRI estável. Para métricas, use Cloudflare Web Analytics ou Cloudflare Zaraz após alinhamento com a equipe de TI.
+- `HSTS`, `X-Content-Type-Options` e `X-Frame-Options` ficam sob responsabilidade das regras de resposta da Cloudflare, evitando cabeçalhos duplicados na aplicação.
+
 ## Painel administrativo
 
 O painel `/admin` foi migrado para Workers. Ele permite:
