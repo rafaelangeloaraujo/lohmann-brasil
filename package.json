@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
+    "test": "node --test",
     "d1:create": "wrangler d1 create lohmann-do-brasil",
     "d1:migrate:local": "wrangler d1 migrations apply lohmann-do-brasil --local",
     "d1:migrate:prod": "wrangler d1 migrations apply lohmann-do-brasil --remote"
