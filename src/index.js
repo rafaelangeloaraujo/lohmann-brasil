@@ -1,16 +1,10 @@
 const LANGS = new Set(['pt', 'en', 'es']);
-const ASSET_VERSION = '20260827-mobile-report-share';
+const ASSET_VERSION = '20260929-security-hardening';
 const GOOGLE_ANALYTICS_ID = 'G-0E2FLEYP1B';
 const ARTICLE_142_PDF = '/assets/biblioteca/a-hora-do-ovo-142-lohmann.pdf';
 
 function googleAnalyticsTag() {
-  return `<script async src="https://www.googletagmanager.com/gtag/js?id=${GOOGLE_ANALYTICS_ID}"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', '${GOOGLE_ANALYTICS_ID}');
-  </script>`;
+  return '';
 }
 
 const ROUTES = {
@@ -121,7 +115,10 @@ export default {
 
     const pageKey = ROUTES[path];
     if (pageKey) {
-      return html(await renderPage(pageKey, request, env));
+      const csrf = csrfToken(request);
+      return html(await renderPage(pageKey, request, env, csrf), {
+        headers: { 'cache-control': 'no-store', 'set-cookie': csrfCookie(csrf) },
+      });
     }
 
     return env.ASSETS ? env.ASSETS.fetch(request) : new Response('Not found', { status: 404 });
@@ -148,6 +145,10 @@ function h(value) {
     .replaceAll("'", '&#039;');
 }
 
+function safeJson(value) {
+  return JSON.stringify(value).replaceAll('<', '\\u003c').replaceAll('>', '\\u003e').replaceAll('&', '\\u0026');
+}
+
 function json(data, init = {}) {
   return new Response(JSON.stringify(data), {
     ...init,
@@ -161,12 +162,16 @@ function json(data, init = {}) {
 }
 
 function html(body, init = {}) {
-  return new Response(body, {
+  const nonce = crypto.randomUUID().replaceAll('-', '');
+  const renderedBody = body
+    .replace(/<script(?![^>]*\bsrc=)(?![^>]*\bnonce=)/gi, `<script nonce="${nonce}"`)
+    .replace(/<style(?![^>]*\bnonce=)/gi, `<style nonce="${nonce}"`);
+  return new Response(renderedBody, {
     ...init,
     headers: {
       'content-type': 'text/html; charset=utf-8',
       'cache-control': 'public, max-age=300',
-      ...securityHeaders(),
+      ...securityHeaders(nonce),
       ...(init.headers || {}),
     },
   });
@@ -206,13 +211,45 @@ async function downloadAsset(request, env, assetPath, filename) {
   });
 }
 
-function securityHeaders() {
-  return {
-    'x-content-type-options': 'nosniff',
-    'x-frame-options': 'SAMEORIGIN',
+function securityHeaders(nonce = '') {
+  const headers = {
     'referrer-policy': 'strict-origin-when-cross-origin',
     'permissions-policy': 'camera=(), microphone=(), geolocation=()',
   };
+  if (nonce) {
+    headers['content-security-policy'] = `default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self' 'nonce-${nonce}'; style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com; style-src-attr 'none'; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https:; connect-src 'self'; frame-src 'none'; manifest-src 'self'; media-src 'self'`;
+  }
+  return headers;
+}
+
+function csrfToken(request) {
+  const existing = cookieValue(request, '__Host-lohmann_csrf');
+  return /^[a-f0-9]{64}$/.test(existing) ? existing : randomToken();
+}
+
+function randomToken() {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  return [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+function csrfCookie(token) {
+  return `__Host-lohmann_csrf=${token}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=7200`;
+}
+
+function sameValue(left, right) {
+  if (left.length !== right.length) return false;
+  let difference = 0;
+  for (let index = 0; index < left.length; index += 1) difference |= left.charCodeAt(index) ^ right.charCodeAt(index);
+  return difference === 0;
+}
+
+function validCsrf(request, submittedToken) {
+  const token = String(submittedToken || '');
+  const storedToken = cookieValue(request, '__Host-lohmann_csrf');
+  if (!/^[a-f0-9]{64}$/.test(token) || !/^[a-f0-9]{64}$/.test(storedToken) || !sameValue(token, storedToken)) return false;
+  const originHeader = request.headers.get('origin');
+  if (originHeader && originHeader !== new URL(request.url).origin) return false;
+  return request.headers.get('sec-fetch-site') !== 'cross-site';
 }
 
 async function products(env, selectedLang = 'pt') {
@@ -478,7 +515,7 @@ async function customCodes(env) {
   return snippets;
 }
 
-async function renderPage(pageKey, request, env) {
+async function renderPage(pageKey, request, env, csrf) {
   const url = new URL(request.url);
   const selectedLang = lang(url);
   const meta = await seo(env, pageKey, request, selectedLang);
@@ -487,7 +524,7 @@ async function renderPage(pageKey, request, env) {
   const teamRows = pageKey === 'sobre' ? await team(env).catch(() => []) : [];
   const sections = await pageSections(env, pageKey).catch(() => ({}));
   const custom = await customCodes(env).catch(() => emptyCustomCodes());
-  const main = renderMain(pageKey, productRows, repRows, teamRows, sections, selectedLang);
+  const main = await renderMain(pageKey, productRows, repRows, teamRows, sections, selectedLang, csrf);
 
   return `<!doctype html>
 <html lang="${h(langAttr(selectedLang))}">
@@ -520,7 +557,7 @@ async function renderPage(pageKey, request, env) {
   ${localizedHeader(pageKey, selectedLang)}
   <main>${main}</main>
   ${footerCloud(selectedLang)}
-  <script>window.LohmannRepresentatives = ${JSON.stringify(repRows)}; window.LohmannFallbackRepresentatives = ${JSON.stringify(fallbackRepresentatives())};</script>
+  <script>window.LohmannRepresentatives = ${safeJson(repRows)}; window.LohmannFallbackRepresentatives = ${safeJson(fallbackRepresentatives())};</script>
   <script src="/assets/site.js?v=${ASSET_VERSION}" defer></script>
   ${custom.bodyEnd}
 </body>
@@ -549,17 +586,17 @@ function footer() {
   return `<footer><a class="brand footer-brand" href="/"><img src="/assets/logo-lohmann-header.png" alt="Lohmann do Brasil"></a><p>Genética como engenharia de sistema.</p><div><a href="/admin">Administração</a><a href="https://ovoflock.com/login" target="_blank" rel="noopener">Ovoflock</a></div><small>&copy; ${new Date().getFullYear()} Lohmann do Brasil</small></footer>`;
 }
 
-function renderMain(pageKey, productRows, repRows, teamRows, sections = {}, selectedLang = 'pt') {
+async function renderMain(pageKey, productRows, repRows, teamRows, sections = {}, selectedLang = 'pt', csrf = '') {
   if (pageKey === 'artigoLohmann142') return articleLohmann142Page();
-  if (selectedLang !== 'pt') return translatedPage(pageKey, productRows, repRows, teamRows, selectedLang);
-  if (pageKey === 'home') return translateStatic(homeCloud(productRows, sections), selectedLang);
+  if (selectedLang !== 'pt') return translatedPage(pageKey, productRows, repRows, teamRows, selectedLang, csrf);
+  if (pageKey === 'home') return translateStatic(homeCloud(productRows, sections, csrf), selectedLang);
   if (pageKey === 'sobre') return translateStatic(sobre(teamRows, sections), selectedLang);
   if (pageKey === 'linhagens') return translateStatic(linhagens(productRows, sections), selectedLang);
   if (pageKey === 'representantes') return translateStatic(reps(repRows, sections), selectedLang);
-  if (pageKey === 'radar') return translateStatic(radar(sections), selectedLang);
+  if (pageKey === 'radar') return secureRadarPage(await cepeaMarketRows(), selectedLang);
   if (pageKey === 'suporte') return simplePage('Suporte técnico', 'Acompanhamento técnico para manejo, leitura de indicadores e organização da rotina produtiva.');
   if (pageKey === 'biblioteca') return simplePage('Base de Conhecimento', 'Planilhas, guias, materiais técnicos e conteúdos de apoio para acompanhamento de sistemas de postura.');
-  return translateStatic(home(productRows), selectedLang);
+  return translateStatic(home(productRows, {}, csrf), selectedLang);
 }
 
 function topBarCloud() {
@@ -585,7 +622,7 @@ function footerCloud() {
   return `<footer><a class="brand footer-brand" href="/"><img src="/assets/logo-lohmann-header.png" alt="Lohmann do Brasil"></a><p>Genética como engenharia de sistema.</p><div><a href="/admin">Administração</a><a href="https://ovoflock.com/login" target="_blank" rel="noopener">Ovoflock</a></div><small>&copy; ${new Date().getFullYear()} Lohmann do Brasil</small></footer>`;
 }
 
-function homeCloud(productRows, sections = {}) {
+function homeCloud(productRows, sections = {}, csrf = '') {
   const heroTitle = sectionValue(sections, 'hero', 'title_pt', 'A ave certa para o seu sistema produtivo.');
   const heroText = sectionValue(sections, 'hero', 'text_pt', 'A Lohmann do Brasil combina genética avícola, acompanhamento técnico e leitura de mercado para apoiar sistemas produtivos com previsibilidade, qualidade de ovos e eficiência operacional.');
   const heroButton = sectionValue(sections, 'hero', 'button_label_pt', 'Conhecer linhagens');
@@ -601,10 +638,10 @@ function homeCloud(productRows, sections = {}) {
   <section class="innovation"><div class="innovation-visual" aria-hidden="true"><div class="analysis-egg"><span></span><i></i></div><span class="metric metric-one"><b>360°</b> sistema calibrado</span><span class="metric metric-two"><b>24/7</b> dados de produção</span><div class="radar"></div></div><div class="innovation-copy reveal"><p class="eyebrow">Ovoflock</p><h2>Dados de produção e rotina técnica em um só ambiente.</h2><p>Uma plataforma para apoiar o acompanhamento de lotes, indicadores e decisões operacionais com mais organização.</p><ul><li>Indicadores de lote</li><li>Acompanhamento produtivo</li><li>Gestão operacional</li><li>Dados para decisão</li></ul><a class="button primary" href="https://ovoflock.com/login" target="_blank" rel="noopener">Acessar Ovoflock</a></div></section>
   <section class="partners-section section" id="parceiros"><header class="section-heading"><div><p class="eyebrow">Parceiros</p><h2>Relações que fortalecem a presença da Lohmann no campo.</h2></div><p>Empresas parceiras conectam genética, produção, distribuição e mercado com atuação próxima ao setor avícola brasileiro.</p></header><div class="partners-grid"><article class="partner-card reveal"><img src="/assets/logo-parceiro-tangara.png?v=${ASSET_VERSION}" alt="Tangará"></article><article class="partner-card reveal"><img src="/assets/logo-parceiro-ovos-sousa.png?v=${ASSET_VERSION}" alt="Ovos Sousa"></article></div></section>
   <section class="technical-radar radar-shortcut section" id="radar-tecnico"><header class="section-heading"><div><p class="eyebrow"><span class="live-dot"></span>Radar de Mercado</p><h2>Indicadores de mercado em uma página dedicada.</h2></div><p>Acompanhe referências de mercado para ovos em diferentes praças brasileiras e use os dados como apoio para leitura técnica e comercial.</p></header><a class="button primary" href="/radar-tecnico">Abrir Radar de Mercado</a></section>
-  <section class="contact" id="contato"><div class="contact-copy"><p class="eyebrow light">Contato</p><h2>Fale com a equipe Lohmann do Brasil.</h2><p>Envie sua solicitação para direcionarmos o atendimento.</p><address>Rua Theofilo Mancor, 670<br>Nova Granada, SP<br>CEP 15440-000</address></div><form action="/api/contact" method="post" class="contact-form"><label>Nome<input name="name" required></label><label>Empresa<input name="company"></label><label>E-mail<input type="email" name="email" required></label><label>Telefone<input name="phone"></label><label class="wide">Assunto<input name="subject"></label><label class="wide">Mensagem<textarea name="message" rows="4" required></textarea></label><button class="button light" type="submit">Enviar</button></form></section>`;
+  <section class="contact" id="contato"><div class="contact-copy"><p class="eyebrow light">Contato</p><h2>Fale com a equipe Lohmann do Brasil.</h2><p>Envie sua solicitação para direcionarmos o atendimento.</p><address>Rua Theofilo Mancor, 670<br>Nova Granada, SP<br>CEP 15440-000</address></div><form action="/api/contact" method="post" class="contact-form"><input type="hidden" name="csrf" value="${h(csrf)}"><label>Nome<input name="name" required></label><label>Empresa<input name="company"></label><label>E-mail<input type="email" name="email" required></label><label>Telefone<input name="phone"></label><label class="wide">Assunto<input name="subject"></label><label class="wide">Mensagem<textarea name="message" rows="4" required></textarea></label><button class="button light" type="submit">Enviar</button></form></section>`;
 }
 
-function home(productRows, sections = {}) {
+function home(productRows, sections = {}, csrf = '') {
   const heroTitle = sectionValue(sections, 'hero', 'title_pt', 'A ave certa para o seu sistema produtivo.');
   const heroText = sectionValue(sections, 'hero', 'text_pt', 'A Lohmann do Brasil combina genética avícola, acompanhamento técnico e leitura de mercado para apoiar sistemas produtivos com previsibilidade, qualidade de ovos e eficiência operacional.');
   const heroButton = sectionValue(sections, 'hero', 'button_label_pt', 'Conhecer linhagens');
@@ -615,7 +652,7 @@ function home(productRows, sections = {}) {
   ${productGrid(productRows, false)}
   <section class="representatives-home"><div><p class="eyebrow">Rede regional</p><h2>${h(sectionValue(sections, 'representantes', 'title_pt', 'Encontre representantes por estado.'))}</h2><p>${h(sectionValue(sections, 'representantes', 'text_pt', 'O mapa interativo direciona o contato técnico e comercial conforme a região de atendimento.'))}</p><a class="button primary" href="${h(sectionValue(sections, 'representantes', 'button_url', '/representantes'))}">${h(sectionValue(sections, 'representantes', 'button_label_pt', 'Ver representantes'))}</a></div><img src="${h(sectionValue(sections, 'representantes', 'image_path', '/assets/representantes-atalho.png'))}" alt=""></section>
   <section class="technical-radar-short"><div><p class="eyebrow">Radar de Mercado</p><h2>${h(sectionValue(sections, 'radar', 'title_pt', 'Leitura de mercado para apoiar decisões.'))}</h2><p>${h(sectionValue(sections, 'radar', 'text_pt', 'Acompanhe indicadores de referência em uma página dedicada.'))}</p><a class="button light" href="${h(sectionValue(sections, 'radar', 'button_url', '/radar-tecnico'))}">${h(sectionValue(sections, 'radar', 'button_label_pt', 'Abrir radar'))}</a></div></section>
-  <section class="contact" id="contato"><div class="contact-copy"><p class="eyebrow light">Contato</p><h2>Fale com a equipe Lohmann do Brasil.</h2><p>Envie sua solicitação para direcionarmos o atendimento.</p></div><form action="/api/contact" method="post" class="contact-form"><label>Nome<input name="name" required></label><label>Empresa<input name="company"></label><label>E-mail<input type="email" name="email" required></label><label>Telefone<input name="phone"></label><label class="wide">Assunto<input name="subject"></label><label class="wide">Mensagem<textarea name="message" rows="4" required></textarea></label><button class="button light" type="submit">Enviar</button></form></section>`;
+  <section class="contact" id="contato"><div class="contact-copy"><p class="eyebrow light">Contato</p><h2>Fale com a equipe Lohmann do Brasil.</h2><p>Envie sua solicitação para direcionarmos o atendimento.</p></div><form action="/api/contact" method="post" class="contact-form"><input type="hidden" name="csrf" value="${h(csrf)}"><label>Nome<input name="name" required></label><label>Empresa<input name="company"></label><label>E-mail<input type="email" name="email" required></label><label>Telefone<input name="phone"></label><label class="wide">Assunto<input name="subject"></label><label class="wide">Mensagem<textarea name="message" rows="4" required></textarea></label><button class="button light" type="submit">Enviar</button></form></section>`;
 }
 
 function productGrid(productRows, includeGuides = true) {
@@ -708,6 +745,58 @@ function reps(repRows) {
   ];
   const mapNodes = states.map(([uf, name, x, y, rx, ry]) => `<g class="state-node ${repRows[uf] ? 'has-reps' : ''}" data-state="${uf}" data-name="${h(name)}" tabindex="0" role="button" aria-label="${h(name)}"><ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}"></ellipse><text x="${x}" y="${y + 8}">${uf}</text></g>`).join('');
   return `<section class="representatives-hero"><h1>Encontre o representante Lohmann para sua região.</h1><p>Use o mapa interativo para localizar o atendimento por estado. Clique sobre a sigla do estado desejado para fixar a lista de representantes e consulte telefone, região de atuação e informações de contato. Para escolher outro estado, use o botão voltar ao mapa.</p></section><section class="representatives-section"><div class="map-shell"><div class="map-toolbar"><span>Mapa Brasil</span><strong id="selected-state-label">--</strong></div><svg class="brazil-state-map image-state-map" viewBox="0 0 1536 1024" role="img" aria-label="Mapa interativo do Brasil por estado"><defs><filter id="stateGlow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="4" result="blur"></feGaussianBlur><feMerge><feMergeNode in="blur"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge></filter></defs><image class="map-art" href="/assets/mapa-brasil-representantes.png" x="0" y="0" width="1536" height="1024" preserveAspectRatio="xMidYMid meet"></image>${mapNodes}</svg><p class="map-note">Clique em um estado para fixar os representantes. Use o botão voltar para limpar a seleção.</p></div><aside class="representative-panel" aria-live="polite"><span class="panel-kicker">Estado selecionado</span><h2 id="rep-state-name">Clique em um estado</h2><button class="rep-reset-button" type="button" id="rep-reset-button">Voltar ao mapa</button><div id="rep-list" class="rep-list"></div></aside></section><section class="content-bands content-bands-rich representatives-info"><div class="content-grid"><article class="content-card"><span>01</span><h2>Leitura regional</h2><p>O representante entende as variáveis de manejo, clima, logística e mercado que influenciam a decisão genética.</p></article><article class="content-card"><span>02</span><h2>Encaminhamento correto</h2><p>Cada solicitação é direcionada para atendimento técnico, comercial ou distribuição com contexto de operação.</p></article><article class="content-card"><span>03</span><h2>Calibragem de campo</h2><p>A conversa com a rede Lohmann ajuda a alinhar linhagem, manejo e próximo passo de suporte.</p></article></div></section>`;
+}
+
+const CEPEA_WIDGET_URL = 'https://cepea.org.br/br/widgetproduto.js.php?fonte=arial&tamanho=10&largura=100%25&corfundo=242424&cortexto=ffffff&corlinha=f78e05&id_indicador%5B%5D=159-Bastos+(SP)+-+FOB-branco&id_indicador%5B%5D=159-Grande+BH+-+(MG)+-+CIF-branco&id_indicador%5B%5D=159-Grande+SP+(SP)+-+CIF-branco&id_indicador%5B%5D=159-Recife+(PE)+-+CIF-branco&id_indicador%5B%5D=159-S.+M.+de+Jetib%C3%A1+(ES)+-+FOB-branco&id_indicador%5B%5D=159-Bastos+(SP)+-+FOB-vermelho&id_indicador%5B%5D=159-Grande+BH+-+(MG)+-+CIF-vermelho&id_indicador%5B%5D=159-Grande+SP+(SP)+-+CIF-vermelho&id_indicador%5B%5D=159-Recife+(PE)+-+CIF-vermelho&id_indicador%5B%5D=159-S.+M.+de+Jetib%C3%A1+(ES)+-+FOB-vermelho&id_indicador%5B%5D=12&id_indicador%5B%5D=92';
+
+async function cepeaMarketRows() {
+  try {
+    const response = await fetch(CEPEA_WIDGET_URL, {
+      headers: { accept: 'application/javascript' },
+      cf: { cacheEverything: true, cacheTtl: 21600 },
+    });
+    if (!response.ok) return [];
+    const payload = await response.text();
+    const body = payload.match(/<tbody>([\s\S]*?)<\/tbody>/i)?.[1] || '';
+    const rows = [];
+    for (const match of body.matchAll(/<tr>\s*<td>([\s\S]*?)<\/td>\s*<td>([\s\S]*?)<\/td>\s*<td>([\s\S]*?)<\/td>\s*<\/tr>/gi)) {
+      const values = match.slice(1, 4).map(cepeaText);
+      if (/^\d{2}\/\d{2}\/\d{4}$/.test(values[0]) && values[1] && values[2]) {
+        rows.push({ date: values[0], product: values[1], value: values[2] });
+      }
+    }
+    return rows;
+  } catch {
+    return [];
+  }
+}
+
+function cepeaText(value) {
+  return value
+    .replace(/<br\s*\/?>/gi, ' ')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#0?39;/gi, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function secureRadarPage(rows, selectedLang = 'pt', translated = null) {
+  const isPt = selectedLang === 'pt';
+  const isEs = selectedLang === 'es';
+  const copy = translated || (isPt ? null : translatedCopy(selectedLang));
+  const title = isPt ? 'Indicadores de mercado para decisão técnica.' : copy.radarPageTitle;
+  const intro = isPt
+    ? 'Acompanhe referências de preço para ovos em praças brasileiras. Os dados servem como apoio para análise técnica e comercial, sempre combinados com a realidade produtiva de cada operação.'
+    : isEs ? 'Acompañe referencias de precio para huevos en plazas brasileñas y use los datos como apoyo técnico y comercial.' : 'Follow egg price references in Brazilian markets and use the data as technical and commercial support.';
+  const market = rows.length
+    ? `<table class="imagenet-widget-tabela"><thead><tr><th>Data</th><th>Produto</th><th>Valor</th></tr></thead><tbody>${rows.map((row) => `<tr><td>${h(row.date)}</td><td>${h(row.product)}</td><td>${h(row.value)}</td></tr>`).join('')}</tbody><tfoot><tr><td colspan="3">Fonte: <a href="https://www.cepea.esalq.usp.br/" target="_blank" rel="noopener noreferrer">Cepea/Esalq-USP</a></td></tr></tfoot></table>`
+    : '<p class="cepea-unavailable">Cotações temporariamente indisponíveis. Consulte novamente em alguns minutos.</p>';
+  return `<section class="internal-hero radar-page-hero"><p class="eyebrow"><span class="live-dot"></span>${navLabel('radar', selectedLang)}</p><h1>${h(title)}</h1><p>${h(intro)}</p></section><section class="technical-radar section radar-page"><header class="section-heading"><div><p class="eyebrow">${isPt ? 'Mercado de ovos' : isEs ? 'Mercado de huevos' : 'Egg market'}</p><h2>${isPt ? 'Cotações de referência' : isEs ? 'Cotizaciones de referencia' : 'Reference prices'}</h2></div></header><div class="radar-dashboard"><aside class="radar-insights"><p class="eyebrow">${isPt ? 'Leitura técnica' : isEs ? 'Lectura técnica' : 'Technical reading'}</p><h2>${isPt ? 'Preço é contexto. Decisão depende de sistema.' : isEs ? 'El precio es contexto. La decisión depende del sistema.' : 'Price is context. Decision depends on the system.'}</h2><p>${isPt ? 'O Radar de Mercado foi pensado como ponto de consulta para produtores, granjas e distribuidores.' : isEs ? 'El Radar de Mercado fue pensado como punto de consulta para productores, granjas y distribuidores.' : 'The Market Radar was designed as a reference point for producers, farms and distributors.'}</p></aside><div class="cepea-widget-card">${market}</div></div></section>${marketReportBlock(selectedLang)}`;
 }
 
 function radar() {
@@ -807,10 +896,13 @@ function productSpecs(slug) {
 }
 
 async function saveContact(request, env) {
+  const form = await request.formData();
+  if (!validCsrf(request, form.get('csrf'))) {
+    return json({ ok: false, message: 'Sessão expirada. Atualize a página e tente novamente.' }, { status: 403 });
+  }
   if (!hasDb(env)) {
     return json({ ok: false, message: 'Banco D1 não configurado. Configure o binding DB no Cloudflare Pages.' }, { status: 503 });
   }
-  const form = await request.formData();
   const payload = {
     name: String(form.get('name') || '').trim(),
     email: String(form.get('email') || '').trim().toLowerCase(),
@@ -827,7 +919,7 @@ async function saveContact(request, env) {
     `INSERT INTO contacts (name, email, phone, company, subject, message, locale)
      VALUES (?, ?, ?, ?, ?, ?, ?)`
   ).bind(payload.name, payload.email, payload.phone, payload.company, payload.subject, payload.message, payload.locale).run();
-  return html('<!doctype html><meta charset="utf-8"><title>Contato enviado</title><body style="font-family:Arial;padding:40px"><h1>Mensagem enviada.</h1><p>Obrigado pelo contato. A equipe Lohmann do Brasil retornará em breve.</p><a href="/">Voltar ao site</a></body>');
+  return html('<!doctype html><meta charset="utf-8"><title>Contato enviado</title><style>body{font-family:Arial,sans-serif;padding:40px}</style><body><h1>Mensagem enviada.</h1><p>Obrigado pelo contato. A equipe Lohmann do Brasil retornará em breve.</p><a href="/">Voltar ao site</a></body>', { headers: { 'cache-control': 'no-store' } });
 }
 
 async function sitemap(request, env) {
@@ -839,6 +931,9 @@ async function sitemap(request, env) {
 async function adminApp(request, env) {
   if (request.method === 'POST') {
     const form = await request.formData();
+    if (!validCsrf(request, form.get('csrf'))) {
+      return adminLoginPage(request, 'Sessão expirada. Atualize a página e tente novamente.', 403);
+    }
     const token = String(form.get('token') || '').trim();
     const configuredToken = String(env.ADMIN_TOKEN || '').trim();
     if (configuredToken && token && token === configuredToken) {
@@ -851,13 +946,15 @@ async function adminApp(request, env) {
         },
       });
     }
-    return adminLoginPage('Token inválido. Confira o valor salvo em ADMIN_TOKEN.', 401);
+    return adminLoginPage(request, 'Token inválido. Confira o valor salvo em ADMIN_TOKEN.', 401);
   }
 
   const auth = adminIdentity(request, env);
   if (!auth.ok) {
-    return adminLoginPage(env.ADMIN_TOKEN ? '' : 'Antes de entrar, crie a variável secreta ADMIN_TOKEN nas configurações do Worker/Pages.', env.ADMIN_TOKEN ? 200 : 403);
+    return adminLoginPage(request, env.ADMIN_TOKEN ? '' : 'Antes de entrar, crie a variável secreta ADMIN_TOKEN nas configurações do Worker/Pages.', env.ADMIN_TOKEN ? 200 : 403);
   }
+
+  const csrf = csrfToken(request);
 
   return html(`<!doctype html>
 <html lang="pt-BR">
@@ -893,10 +990,11 @@ async function adminApp(request, env) {
   </main>
   <script>${adminJs()}</script>
 </body>
-</html>`, { headers: { 'cache-control': 'no-store' } });
+</html>`, { headers: { 'cache-control': 'no-store', 'set-cookie': csrfCookie(csrf) } });
 }
 
-function adminLoginPage(message = '', status = 200) {
+function adminLoginPage(request, message = '', status = 200) {
+  const csrf = csrfToken(request);
   const portals = [
     ['Portal LTZ', 'Acesso ao ambiente principal', 'http://app.ltz.com.br/'],
     ['Fluig Lohmann', 'Portal corporativo e processos internos', 'http://fluig.hyline.com.br:8080/portal/p/1/home'],
@@ -907,6 +1005,7 @@ function adminLoginPage(message = '', status = 200) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="csrf-token" content="${h(csrf)}">
   <title>Administração | Lohmann do Brasil</title>
   <style>
     *{box-sizing:border-box}
@@ -939,6 +1038,7 @@ function adminLoginPage(message = '', status = 200) {
       <p>Informe o token administrativo configurado no Cloudflare para abrir o painel.</p>
       ${message ? `<div class="alert">${h(message)}</div>` : ''}
       <form method="post" action="/admin">
+        <input type="hidden" name="csrf" value="${h(csrf)}">
         <label>Token de acesso
           <input name="token" type="password" autocomplete="current-password" required autofocus>
         </label>
@@ -956,7 +1056,7 @@ function adminLoginPage(message = '', status = 200) {
     </aside>
   </div>
 </body>
-</html>`, { status, headers: { 'cache-control': 'no-store' } });
+</html>`, { status, headers: { 'cache-control': 'no-store', 'set-cookie': csrfCookie(csrf) } });
 }
 function adminIdentity(request, env) {
   const accessEmail = request.headers.get('cf-access-authenticated-user-email');
@@ -983,6 +1083,9 @@ function cookieValue(request, name) {
 async function adminApi(request, env, path) {
   const auth = adminIdentity(request, env);
   if (!auth.ok) return json({ ok: false, message: 'Acesso não autorizado.' }, { status: 403 });
+  if (!['GET', 'HEAD'].includes(request.method) && !validCsrf(request, request.headers.get('x-csrf-token'))) {
+    return json({ ok: false, message: 'Token CSRF inválido ou expirado.' }, { status: 403 });
+  }
   if (!hasDb(env)) return json({ ok: false, message: 'Binding D1 DB não configurado no Pages.' }, { status: 503 });
 
   const url = new URL(request.url);
@@ -1108,11 +1211,12 @@ function adminJs() {
   const title = document.getElementById('admin-title');
   const alertBox = document.getElementById('admin-alert');
   const tabs = document.querySelectorAll('[data-admin-tab]');
+  const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
   const labels = {dashboard:'Visão geral',content:'Textos e botões',seo:'SEO e GEO',products:'Linhagens',representatives:'Representantes',team:'Equipe',contacts:'Contatos'};
   const token = new URLSearchParams(location.search).get('token') || '';
   labels.customCodes = 'Pixels e scripts';
   const api = async (path, options={}) => {
-    const headers = {'content-type':'application/json', ...(options.headers || {})};
+    const headers = {'content-type':'application/json','x-csrf-token':csrf, ...(options.headers || {})};
     if (token) headers['x-admin-token'] = token;
     const response = await fetch(path, {...options, headers, credentials:'same-origin'});
     const contentType = response.headers.get('content-type') || '';
@@ -1122,7 +1226,7 @@ function adminJs() {
   };  const show = (message) => { alertBox.hidden = false; alertBox.textContent = message; setTimeout(()=>alertBox.hidden=true, 3500); };
   const escapeHtml = (value='') => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
   const field = (name, value='', type='text', wide=false) => '<label class="'+(wide?'wide':'')+'">'+name.replaceAll('_',' ')+'<'+(type==='textarea'?'textarea':'input')+' name="'+name+'" '+(type==='textarea'?'':'value="'+escapeHtml(value)+'"')+'>'+(type==='textarea'?escapeHtml(value)+'</textarea>':'')+'</label>';
-  const form = (fields, row, endpoint, method='PUT') => '<form class="admin-form" data-endpoint="'+endpoint+'" data-method="'+method+'">'+(row.id?'<input type="hidden" name="id" value="'+row.id+'">':'')+fields.map(([name,type='text',wide=false])=>field(name,row[name]||'',type,wide)).join('')+'<div class="admin-actions"><button class="admin-button" type="submit">Salvar</button></div></form>';
+  const form = (fields, row, endpoint, method='PUT') => '<form class="admin-form" data-endpoint="'+endpoint+'" data-method="'+method+'"><input type="hidden" name="csrf" value="'+csrf+'">'+(row.id?'<input type="hidden" name="id" value="'+row.id+'">':'')+fields.map(([name,type='text',wide=false])=>field(name,row[name]||'',type,wide)).join('')+'<div class="admin-actions"><button class="admin-button" type="submit">Salvar</button></div></form>';
   document.addEventListener('submit', async (event) => { const el = event.target.closest('.admin-form'); if (!el) return; event.preventDefault(); const payload = Object.fromEntries(new FormData(el).entries()); await api(el.dataset.endpoint,{method:el.dataset.method,body:JSON.stringify(payload)}); show('Alteração salva com sucesso.'); load(currentTab); });
   let currentTab = 'dashboard';
   tabs.forEach(btn => btn.addEventListener('click', () => { tabs.forEach(b=>b.classList.remove('is-active')); btn.classList.add('is-active'); load(btn.dataset.adminTab); }));
@@ -1305,16 +1409,16 @@ function translatedCopy(selectedLang) {
   return selectedLang === 'es' ? es : en;
 }
 
-function translatedPage(pageKey, productRows, repRows, teamRows, selectedLang) {
+function translatedPage(pageKey, productRows, repRows, teamRows, selectedLang, csrf = '') {
   const t = translatedCopy(selectedLang);
-  if (pageKey === 'home') return translatedHome(productRows, selectedLang, t);
+  if (pageKey === 'home') return translatedHome(productRows, selectedLang, t, csrf);
   if (pageKey === 'sobre') return translatedSobre(teamRows, selectedLang, t);
   if (pageKey === 'linhagens') return translatedLinhagens(productRows, selectedLang, t);
   if (pageKey === 'representantes') return translatedReps(repRows, selectedLang, t);
   if (pageKey === 'suporte') return translatedSupport(selectedLang, t);
   if (pageKey === 'biblioteca') return translatedLibrary(selectedLang, t);
-  if (pageKey === 'radar') return translatedRadar(selectedLang, t);
-  return translatedHome(productRows, selectedLang, t);
+  if (pageKey === 'radar') return cepeaMarketRows().then((rows) => secureRadarPage(rows, selectedLang, t));
+  return translatedHome(productRows, selectedLang, t, csrf);
 }
 
 function translatedProductGrid(productRows, selectedLang, t, includeGuides = true) {
@@ -1322,7 +1426,7 @@ function translatedProductGrid(productRows, selectedLang, t, includeGuides = tru
   return `<section class="products section" id="linhagens"><header class="section-heading"><div><p class="eyebrow">${h(t.strainsKicker)}</p><h2>${h(t.strainsTitle)}</h2></div></header><div class="product-grid">${rows.map((product, index) => `<article class="product-card reveal"><div class="product-art product-art-${index + 1}"><span>0${index + 1}</span><img class="product-hen official-hen" src="/assets/${product.slug.includes('brown') ? 'galinha-marron-oficial-lohmann.png' : 'galinha-branca-oficial-lohmann.png'}" alt="${h(product.name)}"></div><div class="product-copy"><small>${h(product.egg_color)}</small><h3>${h(product.name)}</h3><p>${h(product.summary)}</p><a href="${localizedHref(`/linhagens/${h(product.slug)}`, selectedLang)}">${selectedLang === 'es' ? 'Ver detalles' : 'View details'} <b>+</b></a>${includeGuides ? productGuideLinks(product.slug, selectedLang) : ''}</div></article>`).join('')}</div></section>`;
 }
 
-function translatedHome(productRows, selectedLang, t) {
+function translatedHome(productRows, selectedLang, t, csrf = '') {
   const isEs = selectedLang === 'es';
   return `<section class="hero" id="inicio"><div class="hero-copy reveal"><div class="live-label"><i></i>${isEs ? 'Genética como ingeniería de sistema' : 'Genetics as system engineering'}</div><h1>${h(t.heroTitle)}</h1><p>${h(t.heroText)}</p><div class="actions"><a class="button primary" href="${localizedHref('/linhagens', selectedLang)}">${h(t.heroButton)}</a><a class="button ghost" href="#contato">${h(t.talk)}</a></div><div class="signal-row"><span><b>01</b> ${isEs ? 'Sistema' : 'System'}</span><span><b>02</b> ${isEs ? 'Manejo' : 'Management'}</span><span><b>03</b> ${isEs ? 'Calibración' : 'Calibration'}</span></div></div><div class="hero-visual" aria-hidden="true"><div class="egg-photo-layer"></div><div class="tech-grid"></div><div class="scan-line"></div><div class="lohmann-l-motion"><span class="l-mark l-mark-large"></span><span class="l-mark l-mark-medium"></span><span class="l-mark l-mark-small"></span></div></div></section>
   <section class="intro section"><div><p class="eyebrow">Lohmann do Brasil</p><h2>${h(t.aboutTitle)}</h2></div><div><p>${h(t.aboutText)}</p><a class="text-link" href="${localizedHref('/a-lohmann', selectedLang)}">${h(t.aboutMore)} <span>+</span></a></div></section>
@@ -1332,7 +1436,7 @@ function translatedHome(productRows, selectedLang, t) {
   <section class="innovation"><div class="innovation-visual" aria-hidden="true"><div class="analysis-egg"><span></span><i></i></div><div class="radar"></div></div><div class="innovation-copy reveal"><p class="eyebrow">Ovoflock</p><h2>${h(t.ovoflockTitle)}</h2><p>${h(t.ovoflockText)}</p><a class="button primary" href="https://ovoflock.com/login" target="_blank" rel="noopener">Ovoflock</a></div></section>
   <section class="partners-section section"><header class="section-heading"><div><p class="eyebrow">${isEs ? 'Socios' : 'Partners'}</p><h2>${h(t.partnersTitle)}</h2></div></header><div class="partners-grid"><article class="partner-card reveal"><img src="/assets/logo-parceiro-tangara.png?v=${ASSET_VERSION}" alt="Tangará"></article><article class="partner-card reveal"><img src="/assets/logo-parceiro-ovos-sousa.png?v=${ASSET_VERSION}" alt="Ovos Sousa"></article></div></section>
   <section class="technical-radar radar-shortcut section"><header class="section-heading"><div><p class="eyebrow"><span class="live-dot"></span>${navLabel('radar', selectedLang)}</p><h2>${h(t.radarTitle)}</h2></div></header><a class="button primary" href="${localizedHref('/radar-tecnico', selectedLang)}">${isEs ? 'Abrir Radar de Mercado' : 'Open Market Radar'}</a></section>
-  ${translatedContact(selectedLang, t)}`;
+  ${translatedContact(selectedLang, t, csrf)}`;
 }
 
 function translatedSobre(teamRows, selectedLang, t) {
@@ -1394,8 +1498,8 @@ function translatedRadar(selectedLang, t) {
   return `<section class="internal-hero radar-page-hero"><p class="eyebrow"><span class="live-dot"></span>${navLabel('radar', selectedLang)}</p><h1>${h(t.radarPageTitle)}</h1><p>${selectedLang === 'es' ? 'Acompañe referencias de precio para huevos en plazas brasileñas y use los datos como apoyo técnico y comercial.' : 'Follow egg price references in Brazilian markets and use the data as technical and commercial support.'}</p></section><section class="technical-radar section radar-page"><div class="radar-dashboard"><aside class="radar-insights"><p class="eyebrow">${selectedLang === 'es' ? 'Lectura técnica' : 'Technical reading'}</p><h2>${selectedLang === 'es' ? 'El precio es contexto. La decisión depende del sistema.' : 'Price is context. Decision depends on the system.'}</h2><p>${selectedLang === 'es' ? 'El Radar de Mercado fue pensado como punto de consulta para productores, granjas y distribuidores.' : 'Technical Radar was designed as a reference point for producers, farms and distributors.'}</p></aside><div class="cepea-widget-card"><script type="text/javascript" src="https://cepea.org.br/br/widgetproduto.js.php?fonte=arial&tamanho=10&largura=100%25&corfundo=242424&cortexto=ffffff&corlinha=f78e05&id_indicador%5B%5D=159-Bastos+(SP)+-+FOB-branco&id_indicador%5B%5D=159-Grande+BH+-+(MG)+-+CIF-branco&id_indicador%5B%5D=159-Grande+SP+(SP)+-+CIF-branco&id_indicador%5B%5D=159-Recife+(PE)+-+CIF-branco&id_indicador%5B%5D=159-S.+M.+de+Jetib%C3%A1+(ES)+-+FOB-branco&id_indicador%5B%5D=159-Bastos+(SP)+-+FOB-vermelho&id_indicador%5B%5D=159-Grande+BH+-+(MG)+-+CIF-vermelho&id_indicador%5B%5D=159-Grande+SP+(SP)+-+CIF-vermelho&id_indicador%5B%5D=159-Recife+(PE)+-+CIF-vermelho&id_indicador%5B%5D=159-S.+M.+de+Jetib%C3%A1+(ES)+-+FOB-vermelho&id_indicador%5B%5D=12&id_indicador%5B%5D=92"></script></div></div></section>${marketReportBlock(selectedLang)}`;
 }
 
-function translatedContact(selectedLang, t) {
-  return `<section class="contact" id="contato"><div class="contact-copy"><p class="eyebrow light">${navLabel('contato', selectedLang)}</p><h2>${h(t.contactTitle)}</h2><p>${h(t.contactText)}</p><address>Rua Theofilo Mancor, 670<br>Nova Granada, SP<br>CEP 15440-000</address></div><form action="/api/contact" method="post" class="contact-form"><input type="hidden" name="locale" value="${h(selectedLang)}"><label>${selectedLang === 'es' ? 'Nombre' : 'Name'}<input name="name" required></label><label>${selectedLang === 'es' ? 'Empresa' : 'Company'}<input name="company"></label><label>E-mail<input type="email" name="email" required></label><label>${selectedLang === 'es' ? 'Teléfono' : 'Phone'}<input name="phone"></label><label class="wide">${selectedLang === 'es' ? 'Asunto' : 'Subject'}<input name="subject"></label><label class="wide">${selectedLang === 'es' ? 'Mensaje' : 'Message'}<textarea name="message" rows="4" required></textarea></label><button class="button light" type="submit">${selectedLang === 'es' ? 'Enviar' : 'Send'}</button></form></section>`;
+function translatedContact(selectedLang, t, csrf = '') {
+  return `<section class="contact" id="contato"><div class="contact-copy"><p class="eyebrow light">${navLabel('contato', selectedLang)}</p><h2>${h(t.contactTitle)}</h2><p>${h(t.contactText)}</p><address>Rua Theofilo Mancor, 670<br>Nova Granada, SP<br>CEP 15440-000</address></div><form action="/api/contact" method="post" class="contact-form"><input type="hidden" name="csrf" value="${h(csrf)}"><input type="hidden" name="locale" value="${h(selectedLang)}"><label>${selectedLang === 'es' ? 'Nombre' : 'Name'}<input name="name" required></label><label>${selectedLang === 'es' ? 'Empresa' : 'Company'}<input name="company"></label><label>E-mail<input type="email" name="email" required></label><label>${selectedLang === 'es' ? 'Teléfono' : 'Phone'}<input name="phone"></label><label class="wide">${selectedLang === 'es' ? 'Asunto' : 'Subject'}<input name="subject"></label><label class="wide">${selectedLang === 'es' ? 'Mensaje' : 'Message'}<textarea name="message" rows="4" required></textarea></label><button class="button light" type="submit">${selectedLang === 'es' ? 'Enviar' : 'Send'}</button></form></section>`;
 }
 
 function localizedHeader(active, selectedLang = 'pt') {
