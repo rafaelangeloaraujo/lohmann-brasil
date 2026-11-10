@@ -1,4 +1,4 @@
-﻿const toggle = document.querySelector('.menu-toggle');
+const toggle = document.querySelector('.menu-toggle');
 const nav = document.querySelector('.nav');
 toggle?.addEventListener('click', () => {
   const open = document.body.classList.toggle('menu-open');
@@ -122,12 +122,123 @@ const absoluteAssetUrl = (path) => {
   return new URL(cleanPath, window.location.origin).href;
 };
 
-document.querySelectorAll('.report-share-buttons').forEach((group) => {
+const updateReportShareLinks = (group) => {
   const imageUrl = absoluteAssetUrl(group.dataset.shareImage);
   const text = `Relatório mensal do plantel brasileiro de poedeiras - Lohmann do Brasil: ${imageUrl}`;
   group.querySelector('[data-share-channel="whatsapp"]')?.setAttribute('href', `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`);
   group.querySelector('[data-share-channel="email"]')?.setAttribute('href', `mailto:?subject=${encodeURIComponent('Relatório mensal Lohmann do Brasil')}&body=${encodeURIComponent(text)}`);
   group.querySelector('[data-share-channel="instagram"]')?.setAttribute('href', imageUrl);
+};
+
+document.querySelectorAll('.report-share-buttons').forEach(updateReportShareLinks);
+
+// Relatório mensal com várias páginas: setas, pontos, teclado e arraste.
+document.querySelectorAll('[data-report-slider]').forEach((slider) => {
+  const track = slider.querySelector('[data-report-track]');
+  const slides = [...slider.querySelectorAll('[data-report-slide]')];
+  const prev = slider.querySelector('[data-report-prev]');
+  const next = slider.querySelector('[data-report-next]');
+  const current = slider.querySelector('[data-report-current]');
+  const dots = [...slider.querySelectorAll('[data-report-dot]')];
+  const section = slider.closest('.market-report-section');
+  if (!track || slides.length < 2) {
+    slider.classList.add('is-single');
+    return;
+  }
+  let index = 0;
+
+  const setActive = (newIndex) => {
+    index = Math.max(0, Math.min(slides.length - 1, newIndex));
+    if (current) current.textContent = String(index + 1);
+    if (prev) prev.disabled = index === 0;
+    if (next) next.disabled = index === slides.length - 1;
+    dots.forEach((dot, dotIndex) => {
+      if (dotIndex === index) dot.setAttribute('aria-current', 'true');
+      else dot.removeAttribute('aria-current');
+    });
+    slides.forEach((slide, slideIndex) => slide.classList.toggle('is-active', slideIndex === index));
+    const image = slides[index].querySelector('img')?.getAttribute('src');
+    if (image && section) {
+      section.querySelectorAll('[data-share-image]').forEach((node) => {
+        node.dataset.shareImage = image;
+      });
+      section.querySelectorAll('.report-share-buttons').forEach(updateReportShareLinks);
+      const download = section.querySelector('[data-share-channel="instagram"]');
+      download?.setAttribute('download', `relatorio-mensal-lohmann-pagina-${index + 1}.jpg`);
+    }
+  };
+
+  const goTo = (newIndex) => {
+    const target = slides[Math.max(0, Math.min(slides.length - 1, newIndex))];
+    track.scrollTo({ left: target.offsetLeft - track.offsetLeft, behavior: 'smooth' });
+    setActive(slides.indexOf(target));
+  };
+
+  prev?.addEventListener('click', () => goTo(index - 1));
+  next?.addEventListener('click', () => goTo(index + 1));
+  dots.forEach((dot) => dot.addEventListener('click', () => goTo(Number(dot.dataset.reportDot))));
+  track.addEventListener('keydown', (event) => {
+    if (event.key === 'ArrowRight') { event.preventDefault(); goTo(index + 1); }
+    if (event.key === 'ArrowLeft') { event.preventDefault(); goTo(index - 1); }
+  });
+
+  let scrollTimer;
+  track.addEventListener('scroll', () => {
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(() => {
+      const width = track.clientWidth || 1;
+      const nearest = Math.round(track.scrollLeft / width);
+      if (nearest !== index) setActive(nearest);
+    }, 80);
+  }, { passive: true });
+
+  slider.classList.add('is-enhanced');
+  setActive(0);
+});
+
+// Cotações Cepea: se o servidor não conseguiu ler o widget, o navegador busca direto.
+document.querySelectorAll('[data-cepea-src]').forEach(async (box) => {
+  const status = box.querySelector('[data-cepea-status]');
+  const fail = () => {
+    if (status) status.textContent = 'Cotações temporariamente indisponíveis. Consulte novamente em alguns minutos.';
+  };
+  try {
+    const response = await fetch(box.dataset.cepeaSrc, { credentials: 'omit' });
+    if (!response.ok) return fail();
+    const payload = await response.text();
+    const markup = (payload.match(/<tbody>([\s\S]*?)<\/tbody>/i) || [])[1] || '';
+    const parsed = new DOMParser().parseFromString(`<table><tbody>${markup}</tbody></table>`, 'text/html');
+    const rows = [...parsed.querySelectorAll('tbody tr')]
+      .map((tr) => [...tr.querySelectorAll('td')].map((td) => td.innerText || td.textContent || ''))
+      .map((cells) => cells.map((cell) => cell.replace(/\s+/g, ' ').trim()))
+      .filter((cells) => cells.length >= 3 && /^\d{2}\/\d{2}\/\d{4}$/.test(cells[0]) && cells[1] && cells[2]);
+    if (!rows.length) return fail();
+    const table = document.createElement('table');
+    table.className = 'imagenet-widget-tabela';
+    const head = table.createTHead().insertRow();
+    ['Data', 'Produto', 'Valor'].forEach((label) => {
+      const th = document.createElement('th');
+      th.textContent = label;
+      head.appendChild(th);
+    });
+    const body = table.createTBody();
+    rows.forEach((cells) => {
+      const tr = body.insertRow();
+      cells.slice(0, 3).forEach((value) => { tr.insertCell().textContent = value; });
+    });
+    const foot = table.createTFoot().insertRow().insertCell();
+    foot.colSpan = 3;
+    foot.append('Fonte: ');
+    const link = document.createElement('a');
+    link.href = 'https://www.cepea.esalq.usp.br/';
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = 'Cepea/Esalq-USP';
+    foot.appendChild(link);
+    box.replaceChildren(table);
+  } catch {
+    fail();
+  }
 });
 
 document.querySelectorAll('.report-share-native').forEach((button) => {
