@@ -68,3 +68,27 @@ test('radar renders sanitized data without external scripts', async () => {
     globalThis.fetch = originalFetch;
   }
 });
+
+test('radar falls back to browser-side Cepea loading when the server fetch fails', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response('blocked', { status: 403 });
+  try {
+    const response = await worker.fetch(new Request('https://lohmann.example/radar-tecnico'), baseEnv);
+    const body = await response.text();
+    const csp = response.headers.get('content-security-policy') || '';
+    assert.equal(response.status, 200);
+    assert.match(body, /data-cepea-src="https:\/\/cepea\.org\.br\/br\/widgetproduto\.js\.php/);
+    assert.match(csp, /connect-src 'self' https:\/\/cepea\.org\.br/);
+    assert.doesNotMatch(body, /<script[^>]+src="https:\/\//i);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('radar shows every page of the monthly report', async () => {
+  const response = await worker.fetch(new Request('https://lohmann.example/radar-tecnico'), baseEnv);
+  const body = await response.text();
+  assert.match(body, /data-report-slider/);
+  assert.match(body, /radar-report-mensal-p1\.jpg/);
+  assert.match(body, /radar-report-mensal-p2\.jpg/);
+});
