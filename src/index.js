@@ -1,5 +1,5 @@
 const LANGS = new Set(['pt', 'en', 'es']);
-const ASSET_VERSION = '20260929-security-hardening';
+const ASSET_VERSION = '20261109-radar-report-cepea';
 const GOOGLE_ANALYTICS_ID = 'G-0E2FLEYP1B';
 const ARTICLE_142_PDF = '/assets/biblioteca/a-hora-do-ovo-142-lohmann.pdf';
 
@@ -217,7 +217,7 @@ function securityHeaders(nonce = '') {
     'permissions-policy': 'camera=(), microphone=(), geolocation=()',
   };
   if (nonce) {
-    headers['content-security-policy'] = `default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self' 'nonce-${nonce}'; style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com; style-src-attr 'none'; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https:; connect-src 'self'; frame-src 'none'; manifest-src 'self'; media-src 'self'`;
+    headers['content-security-policy'] = `default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self' 'nonce-${nonce}'; style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com; style-src-attr 'none'; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https:; connect-src 'self' https://cepea.org.br; frame-src 'none'; manifest-src 'self'; media-src 'self'`;
   }
   return headers;
 }
@@ -749,26 +749,61 @@ function reps(repRows) {
 
 const CEPEA_WIDGET_URL = 'https://cepea.org.br/br/widgetproduto.js.php?fonte=arial&tamanho=10&largura=100%25&corfundo=242424&cortexto=ffffff&corlinha=f78e05&id_indicador%5B%5D=159-Bastos+(SP)+-+FOB-branco&id_indicador%5B%5D=159-Grande+BH+-+(MG)+-+CIF-branco&id_indicador%5B%5D=159-Grande+SP+(SP)+-+CIF-branco&id_indicador%5B%5D=159-Recife+(PE)+-+CIF-branco&id_indicador%5B%5D=159-S.+M.+de+Jetib%C3%A1+(ES)+-+FOB-branco&id_indicador%5B%5D=159-Bastos+(SP)+-+FOB-vermelho&id_indicador%5B%5D=159-Grande+BH+-+(MG)+-+CIF-vermelho&id_indicador%5B%5D=159-Grande+SP+(SP)+-+CIF-vermelho&id_indicador%5B%5D=159-Recife+(PE)+-+CIF-vermelho&id_indicador%5B%5D=159-S.+M.+de+Jetib%C3%A1+(ES)+-+FOB-vermelho&id_indicador%5B%5D=12&id_indicador%5B%5D=92';
 
+const CEPEA_LAST_GOOD_KEY = 'https://lohmanndobrasil.com.br/__cache/cepea-last-good-v1';
+
 async function cepeaMarketRows() {
+  const fresh = await fetchCepeaRows();
+  const cache = typeof caches !== 'undefined' ? caches.default : null;
+  if (fresh.length) {
+    if (cache) {
+      try {
+        await cache.put(CEPEA_LAST_GOOD_KEY, new Response(JSON.stringify(fresh), {
+          headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=604800' },
+        }));
+      } catch {}
+    }
+    return fresh;
+  }
+  if (cache) {
+    try {
+      const cached = await cache.match(CEPEA_LAST_GOOD_KEY);
+      if (cached) {
+        const rows = await cached.json();
+        if (Array.isArray(rows)) return rows;
+      }
+    } catch {}
+  }
+  return [];
+}
+
+async function fetchCepeaRows() {
   try {
     const response = await fetch(CEPEA_WIDGET_URL, {
-      headers: { accept: 'application/javascript' },
-      cf: { cacheEverything: true, cacheTtl: 21600 },
+      headers: {
+        accept: 'application/javascript, text/javascript, */*;q=0.8',
+        'accept-language': 'pt-BR,pt;q=0.9',
+        referer: 'https://lohmanndobrasil.com.br/radar-tecnico',
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36',
+      },
+      cf: { cacheEverything: true, cacheTtl: 3600 },
     });
     if (!response.ok) return [];
-    const payload = await response.text();
-    const body = payload.match(/<tbody>([\s\S]*?)<\/tbody>/i)?.[1] || '';
-    const rows = [];
-    for (const match of body.matchAll(/<tr>\s*<td>([\s\S]*?)<\/td>\s*<td>([\s\S]*?)<\/td>\s*<td>([\s\S]*?)<\/td>\s*<\/tr>/gi)) {
-      const values = match.slice(1, 4).map(cepeaText);
-      if (/^\d{2}\/\d{2}\/\d{4}$/.test(values[0]) && values[1] && values[2]) {
-        rows.push({ date: values[0], product: values[1], value: values[2] });
-      }
-    }
-    return rows;
+    return parseCepeaRows(await response.text());
   } catch {
     return [];
   }
+}
+
+function parseCepeaRows(payload) {
+  const body = String(payload || '').match(/<tbody>([\s\S]*?)<\/tbody>/i)?.[1] || '';
+  const rows = [];
+  for (const match of body.matchAll(/<tr>\s*<td>([\s\S]*?)<\/td>\s*<td>([\s\S]*?)<\/td>\s*<td>([\s\S]*?)<\/td>\s*<\/tr>/gi)) {
+    const values = match.slice(1, 4).map(cepeaText);
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(values[0]) && values[1] && values[2]) {
+      rows.push({ date: values[0], product: values[1], value: values[2] });
+    }
+  }
+  return rows;
 }
 
 function cepeaText(value) {
@@ -795,7 +830,7 @@ function secureRadarPage(rows, selectedLang = 'pt', translated = null) {
     : isEs ? 'Acompañe referencias de precio para huevos en plazas brasileñas y use los datos como apoyo técnico y comercial.' : 'Follow egg price references in Brazilian markets and use the data as technical and commercial support.';
   const market = rows.length
     ? `<table class="imagenet-widget-tabela"><thead><tr><th>Data</th><th>Produto</th><th>Valor</th></tr></thead><tbody>${rows.map((row) => `<tr><td>${h(row.date)}</td><td>${h(row.product)}</td><td>${h(row.value)}</td></tr>`).join('')}</tbody><tfoot><tr><td colspan="3">Fonte: <a href="https://www.cepea.esalq.usp.br/" target="_blank" rel="noopener noreferrer">Cepea/Esalq-USP</a></td></tr></tfoot></table>`
-    : '<p class="cepea-unavailable">Cotações temporariamente indisponíveis. Consulte novamente em alguns minutos.</p>';
+    : `<div class="cepea-client" data-cepea-src="${h(CEPEA_WIDGET_URL)}"><p class="cepea-unavailable" data-cepea-status>${isPt ? 'Carregando cotações do Cepea…' : isEs ? 'Cargando cotizaciones del Cepea…' : 'Loading Cepea prices…'}</p></div>`;
   return `<section class="internal-hero radar-page-hero"><p class="eyebrow"><span class="live-dot"></span>${navLabel('radar', selectedLang)}</p><h1>${h(title)}</h1><p>${h(intro)}</p></section><section class="technical-radar section radar-page"><header class="section-heading"><div><p class="eyebrow">${isPt ? 'Mercado de ovos' : isEs ? 'Mercado de huevos' : 'Egg market'}</p><h2>${isPt ? 'Cotações de referência' : isEs ? 'Cotizaciones de referencia' : 'Reference prices'}</h2></div></header><div class="radar-dashboard"><aside class="radar-insights"><p class="eyebrow">${isPt ? 'Leitura técnica' : isEs ? 'Lectura técnica' : 'Technical reading'}</p><h2>${isPt ? 'Preço é contexto. Decisão depende de sistema.' : isEs ? 'El precio es contexto. La decisión depende del sistema.' : 'Price is context. Decision depends on the system.'}</h2><p>${isPt ? 'O Radar de Mercado foi pensado como ponto de consulta para produtores, granjas e distribuidores.' : isEs ? 'El Radar de Mercado fue pensado como punto de consulta para productores, granjas y distribuidores.' : 'The Market Radar was designed as a reference point for producers, farms and distributors.'}</p></aside><div class="cepea-widget-card">${market}</div></div></section>${marketReportBlock(selectedLang)}`;
 }
 
@@ -809,10 +844,33 @@ function marketReportBlock(selectedLang = 'pt') {
     en: { eyebrow: 'Monthly report', title: 'Brazilian laying hen flock', text: 'View the support material with placement, national flock and indicator evolution data. The full file is available for download below.', button: 'Download PDF report', share: 'Share image', whatsapp: 'WhatsApp', email: 'E-mail', instagram: 'Instagram' },
     es: { eyebrow: 'Informe mensual', title: 'Plantel brasileño de ponedoras', text: 'Consulte el material de apoyo con datos de alojamiento, plantel nacional y evolución de indicadores. El archivo completo está disponible para descarga.', button: 'Descargar informe en PDF', share: 'Compartir imagen', whatsapp: 'WhatsApp', email: 'E-mail', instagram: 'Instagram' },
   }[selectedLang] || {};
-  const pdf = '/assets/biblioteca/relatorio-mensal-plantel-poedeiras.pdf';
-  const image = `/assets/radar-report-mensal.png?v=${ASSET_VERSION}`;
-  return `<section class="market-report-section"><div class="market-report-copy"><p class="eyebrow">${h(labels.eyebrow)}</p><h2>${h(labels.title)}</h2><p>${h(labels.text)}</p><div class="market-report-actions"><a class="button primary" href="${pdf}" download>${h(labels.button)}</a><button class="button ghost report-share-native" type="button" data-share-image="${h(image)}">${h(labels.share)}</button></div><div class="report-share-buttons" data-share-image="${h(image)}"><a class="report-share-button report-share-whatsapp" href="#" data-share-channel="whatsapp">${h(labels.whatsapp)}</a><a class="report-share-button report-share-email" href="#" data-share-channel="email">${h(labels.email)}</a><a class="report-share-button report-share-instagram" href="${h(image)}" download="relatorio-mensal-plantel-poedeiras-lohmann.png" data-share-channel="instagram">${h(labels.instagram)}</a></div></div><div class="market-report-viewer market-report-image-only"><img src="${h(image)}" alt="Relatório mensal do plantel brasileiro de poedeiras"></div></section>`;
+  const pdf = `/assets/biblioteca/relatorio-mensal-plantel-poedeiras.pdf?v=${ASSET_VERSION}`;
+  const nav = {
+    pt: { prev: 'Página anterior', next: 'Próxima página', page: 'Página', of: 'de', edition: 'Edição' },
+    en: { prev: 'Previous page', next: 'Next page', page: 'Page', of: 'of', edition: 'Edition' },
+    es: { prev: 'Página anterior', next: 'Página siguiente', page: 'Página', of: 'de', edition: 'Edición' },
+  }[selectedLang] || {};
+  const pages = MARKET_REPORT.pages.map((page) => ({ ...page, src: `${page.src}?v=${ASSET_VERSION}` }));
+  const image = pages[0].src;
+  const total = pages.length;
+  const slides = pages.map((page, index) => `<figure class="report-slide" data-report-slide="${index}" aria-label="${h(nav.page)} ${index + 1} ${h(nav.of)} ${total}"><img src="${h(page.src)}" alt="${h(page.alt)}" width="1600" height="2128"${index ? ' loading="lazy"' : ''}></figure>`).join('');
+  const dots = pages.map((page, index) => `<button type="button" class="report-slider-dot" data-report-dot="${index}" aria-label="${h(nav.page)} ${index + 1}"${index ? '' : ' aria-current="true"'}></button>`).join('');
+  return `<section class="market-report-section"><div class="market-report-copy"><p class="eyebrow">${h(labels.eyebrow)}</p><h2>${h(labels.title)}</h2><p class="market-report-edition">${h(nav.edition)}: <strong>${h(MARKET_REPORT.edition[selectedLang] || MARKET_REPORT.edition.pt)}</strong></p><p>${h(labels.text)}</p><div class="market-report-actions"><a class="button primary" href="${h(pdf)}" download="${h(MARKET_REPORT.downloadName)}">${h(labels.button)}</a><button class="button ghost report-share-native" type="button" data-share-image="${h(image)}">${h(labels.share)}</button></div><div class="report-share-buttons" data-share-image="${h(image)}"><a class="report-share-button report-share-whatsapp" href="#" data-share-channel="whatsapp">${h(labels.whatsapp)}</a><a class="report-share-button report-share-email" href="#" data-share-channel="email">${h(labels.email)}</a><a class="report-share-button report-share-instagram" href="${h(image)}" download="relatorio-mensal-lohmann-pagina-1.jpg" data-share-channel="instagram">${h(labels.instagram)}</a></div></div><div class="market-report-viewer report-slider" data-report-slider><div class="report-slider-frame"><div class="report-slider-track" data-report-track tabindex="0" aria-roledescription="carousel" aria-label="${h(labels.title)}">${slides}</div></div><div class="report-slider-bar"><div class="report-slider-pager"><button type="button" class="report-slider-arrow report-slider-prev" data-report-prev aria-label="${h(nav.prev)}" disabled><span aria-hidden="true">‹</span></button><span class="report-slider-count" aria-live="polite">${h(nav.page)} <strong data-report-current>1</strong> ${h(nav.of)} ${total}</span><button type="button" class="report-slider-arrow report-slider-next" data-report-next aria-label="${h(nav.next)}"><span aria-hidden="true">›</span></button></div><div class="report-slider-dots">${dots}</div></div></div></section>`;
 }
+
+// Relatório mensal exibido no Radar de Mercado. Para atualizar o mês:
+// 1) troque public/assets/biblioteca/relatorio-mensal-plantel-poedeiras.pdf
+// 2) troque as imagens das páginas em public/assets/radar-report-mensal-p1.jpg, -p2.jpg...
+// 3) ajuste "edition" abaixo e altere ASSET_VERSION no topo do arquivo.
+const MARKET_REPORT = {
+  edition: { pt: 'Setembro/2026', en: 'September 2026', es: 'Septiembre/2026' },
+  downloadName: 'Lohmann-Relatorio-Mensal-Setembro-2026.pdf',
+  pages: [
+    { src: '/assets/radar-report-mensal-p1.jpg', alt: 'Panorama da produção de ovos comerciais no Brasil – setembro/2026: total alojado e alojamento por tipo de linhagem' },
+    { src: '/assets/radar-report-mensal-p2.jpg', alt: 'Plantel nacional – setembro/2026: acumulado do ano, evolução mensal dos alojamentos e variação por região' },
+  ],
+};
+
 function simplePage(title, description) {
   if (title === 'Suporte técnico') return suportePage();
   if (title === 'Base de Conhecimento') return bibliotecaPage();
